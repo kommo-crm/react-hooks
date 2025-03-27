@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "rootDir": "./src"
+  },
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "node_modules",
+    "src/**/__tests__",
+    "src/**/*.stories.tsx",
+    "dist",
+    "jest.config.ts"
+  ]
+}
