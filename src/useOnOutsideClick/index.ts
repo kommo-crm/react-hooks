@@ -1,0 +1,1 @@
+export { useOnOutsideClick } from './useOnOutsideClick';
