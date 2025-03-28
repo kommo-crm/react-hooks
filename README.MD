@@ -28,7 +28,7 @@ yarn install && yarn build
 
 ### Storybook Commands
 
-To test your hooks we recommend use Storybook.
+To test your hooks we recommend to use Storybook.
 
 | Command                | Runs                               |
 | ---------------------- | ---------------------------------- |
