@@ -21,7 +21,7 @@
     "importHelpers": true,
     "baseUrl": ".",
     "paths": {
-      "@utils/*": ["src/utils/*"]
+      "@utils": ["src/utils"]
     }
   },
   "exclude": ["node_modules", "dist", "jest.config.ts"]

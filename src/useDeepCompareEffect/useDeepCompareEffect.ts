@@ -1,5 +1,5 @@
 import { useEffect, useRef, DependencyList, EffectCallback } from 'react';
-import { isEqual } from '@utils/isEqual';
+import { isEqual } from '@utils';
 
 export const useDeepCompareEffect = (
   callback: EffectCallback,

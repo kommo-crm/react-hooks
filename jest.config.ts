@@ -8,7 +8,7 @@ const config: Config.InitialOptions = {
   testMatch: ['<rootDir>/src/**/*.test.(ts|tsx)'],
   rootDir: './',
   moduleNameMapper: {
-    '^@utils/(.*)$': '<rootDir>/src/utils/$1',
+    '^@utils': '<rootDir>/src/utils',
   },
 };
 

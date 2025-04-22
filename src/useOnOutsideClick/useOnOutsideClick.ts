@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { reject } from '@utils/reject';
+import { reject } from '@utils';
 
 type UseOnOutsideClickOptions = {
   /**

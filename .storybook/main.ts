@@ -15,7 +15,7 @@ const config: StorybookConfig = {
     return mergeConfig(viteConfig, {
       resolve: {
         alias: {
-          '@utils/': resolve(__dirname, '../src/utils'),
+          '@utils': resolve(__dirname, '../src/utils'),
         },
       },
     });
