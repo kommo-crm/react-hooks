@@ -2,18 +2,8 @@
   "name": "@kommo-crm/react-hooks",
   "description": "A collection of useful React hooks created for use in different Kommo projects",
   "version": "1.0.3",
-  "type": "module",
-  "exports": {
-		".": {
-			"import": {
-				"types": "./dist/index.d.ts",
-				"default": "./dist/index.js"
-			},
-			"require": {
-				"default": "./dist/index.cjs"
-			}
-		}
-	},
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
   "files": [
     "dist/"
   ],
@@ -30,7 +20,7 @@
   "scripts": {
     "test": "jest --maxWorkers 2",
     "test:coverage": "jest --coverage",
-    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "build": "tsup",
     "storybook": "storybook dev -p 6006",
     "lint": "eslint"
   },
