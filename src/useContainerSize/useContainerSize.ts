@@ -92,13 +92,13 @@ export const useContainerSize = <T extends Breakpoints>(
   const throttledResizeRef = useRef<ReturnType<typeof throttle> | null>(null);
 
   const handleResize = useCallback(() => {
-    const element = elementRef.current;
+    const currentElement = elementRef.current;
 
-    if (!element || !isEnabled) {
+    if (!currentElement || !isEnabled) {
       return;
     }
 
-    const newWidth = element.offsetWidth;
+    const newWidth = currentElement.offsetWidth;
     const newSize = getCurrentSize(newWidth);
 
     setSize((prev) => {
