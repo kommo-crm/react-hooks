@@ -73,90 +73,100 @@ describe('useContainerSize', () => {
     expect(result.current.width).toBeNull();
   });
 
-  it('should return correct breakpoint for container width', () => {
+  it('should return correct breakpoint for container width', async () => {
     const breakpoints = {
       sm: 0,
       md: 400,
       lg: 800,
     } as const;
 
-    const { result } = renderHook(() => useContainerSize({ breakpoints }));
+    const { result, waitForNextUpdate } = renderHook(() =>
+      useContainerSize({ breakpoints })
+    );
 
-    act(() => {
+    await act(async () => {
       const element = createElement(500);
       result.current.ref(element);
+      await waitForNextUpdate();
     });
 
     expect(result.current.size).toBe('md');
     expect(result.current.width).toBe(500);
   });
 
-  it('should return null when isEnabled is false', () => {
+  it('should return null when isEnabled is false', async () => {
     const breakpoints = {
       sm: 0,
       md: 400,
     } as const;
 
-    const { result } = renderHook(() =>
+    const { result, waitForNextUpdate } = renderHook(() =>
       useContainerSize({
         breakpoints,
         isEnabled: false,
       })
     );
 
-    const element = createElement(500);
-    result.current.ref(element);
+    await act(async () => {
+      const element = createElement(500);
+      result.current.ref(element);
+      await waitForNextUpdate();
+    });
 
     expect(result.current.size).toBeNull();
     expect(result.current.width).toBeNull();
   });
 
-  it('should use custom throttleTime when provided', () => {
+  it('should use custom throttleTime when provided', async () => {
     const breakpoints = {
       sm: 0,
       md: 400,
       lg: 800,
     } as const;
 
-    const { result } = renderHook(() =>
+    const { result, waitForNextUpdate } = renderHook(() =>
       useContainerSize({
         breakpoints,
         throttleTime: 50,
       })
     );
 
-    act(() => {
+    await act(async () => {
       const element = createElement(500);
       result.current.ref(element);
+      await waitForNextUpdate();
     });
 
     expect(result.current.size).toBe('md');
   });
 
-  it('should use default throttleTime when not provided', () => {
+  it('should use default throttleTime when not provided', async () => {
     const breakpoints = {
       sm: 0,
       md: 400,
     } as const;
 
-    const { result } = renderHook(() => useContainerSize({ breakpoints }));
+    const { result, waitForNextUpdate } = renderHook(() =>
+      useContainerSize({ breakpoints })
+    );
 
-    act(() => {
+    await act(async () => {
       const element = createElement(500);
       result.current.ref(element);
+      await waitForNextUpdate();
     });
 
     expect(result.current.size).toBe('md');
   });
 
-  it('should update size when element width changes and isEnabled is true', () => {
+  it('should update size when element width changes and isEnabled is true', async () => {
     const breakpoints = {
       sm: 0,
       md: 400,
       lg: 800,
     } as const;
 
-    const { result } = renderHook(() =>
+    const { result, waitForNextUpdate } = renderHook(() =>
       useContainerSize({
         breakpoints,
         isEnabled: true,
@@ -166,8 +176,9 @@ describe('useContainerSize', () => {
 
     const element = createElement(500);
 
-    act(() => {
+    await act(async () => {
       result.current.ref(element);
+      await waitForNextUpdate();
     });
 
     expect(result.current.size).toBe('md');

@@ -1,4 +1,11 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { throttle } from '@utils';
 
 export type Breakpoints = Record<string, number>;
@@ -46,7 +53,6 @@ export const useContainerSize = <T extends Breakpoints>(
 ): UseContainerSizeResult<T> => {
   const { breakpoints, isEnabled = true, throttleTime = 10 } = options;
 
-  const elementRef = useRef<HTMLElement | null>(null);
   const [element, setElement] = useState<HTMLElement | null>(null);
 
   const parsedBreakpoints = useMemo(() => {
@@ -92,13 +98,11 @@ export const useContainerSize = <T extends Breakpoints>(
   const throttledResizeRef = useRef<ReturnType<typeof throttle> | null>(null);
 
   const handleResize = useCallback(() => {
-    const currentElement = elementRef.current;
-
-    if (!currentElement || !isEnabled) {
+    if (!element || !isEnabled) {
       return;
     }
 
-    const newWidth = currentElement.offsetWidth;
+    const newWidth = element.offsetWidth;
     const newSize = getCurrentSize(newWidth);
 
     setSize((prev) => {
@@ -108,9 +112,21 @@ export const useContainerSize = <T extends Breakpoints>(
     setWidth((prev) => {
       return prev === newWidth ? prev : newWidth;
     });
-  }, [getCurrentSize, isEnabled]);
+  }, [element, getCurrentSize, isEnabled]);
 
   handleResizeRef.current = handleResize;
+
+  useEffect(() => {
+    if (!element || !isEnabled) {
+      setSize(null);
+      setWidth(null);
+      return;
+    }
+
+    if (handleResizeRef.current) {
+      handleResizeRef.current();
+    }
+  }, [element, isEnabled]);
 
   useLayoutEffect(() => {
     if (!element || !isEnabled) {
@@ -136,8 +152,6 @@ export const useContainerSize = <T extends Breakpoints>(
 
     throttledResizeRef.current = throttledResize;
 
-    throttledResize();
-
     const observer = new ResizeObserver(throttledResize);
 
     observer.observe(element);
@@ -150,7 +164,6 @@ export const useContainerSize = <T extends Breakpoints>(
   }, [element, isEnabled, throttleTime]);
 
   const ref = useCallback((node: HTMLElement | null) => {
-    elementRef.current = node;
     setElement(node);
   }, []);
 
