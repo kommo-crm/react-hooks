@@ -1,12 +1,5 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import { throttle } from '@utils';
+import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import { throttle } from 'throttle-debounce';
 
 export type Breakpoints = Record<string, number>;
 
@@ -94,9 +87,6 @@ export const useContainerSize = <T extends Breakpoints>(
     return element.offsetWidth;
   });
 
-  const handleResizeRef = useRef<(() => void) | null>(null);
-  const throttledResizeRef = useRef<ReturnType<typeof throttle> | null>(null);
-
   const handleResize = useCallback(() => {
     if (!element || !isEnabled) {
       return;
@@ -114,43 +104,24 @@ export const useContainerSize = <T extends Breakpoints>(
     });
   }, [element, getCurrentSize, isEnabled]);
 
-  handleResizeRef.current = handleResize;
-
-  useEffect(() => {
-    if (!element || !isEnabled) {
-      setSize(null);
-      setWidth(null);
-      return;
-    }
-
-    if (handleResizeRef.current) {
-      handleResizeRef.current();
-    }
-  }, [element, isEnabled]);
-
   useLayoutEffect(() => {
     if (!element || !isEnabled) {
       return;
     }
 
-    if (throttledResizeRef.current) {
-      throttledResizeRef.current.cancel();
+    if (typeof ResizeObserver === 'undefined') {
+      console.warn(
+        'useContainerSize: ResizeObserver is not available. Please provide a polyfill for browsers that do not support it.'
+      );
+      return;
     }
 
-    const throttledResize = throttle(
-      () => {
-        if (handleResizeRef.current) {
-          handleResizeRef.current();
-        }
-      },
-      throttleTime,
-      {
-        leading: true,
-        trailing: true,
-      }
-    );
+    const throttledResize = throttle(throttleTime, handleResize, {
+      noLeading: false,
+      noTrailing: false,
+    });
 
-    throttledResizeRef.current = throttledResize;
+    throttledResize();
 
     const observer = new ResizeObserver(throttledResize);
 
@@ -159,9 +130,8 @@ export const useContainerSize = <T extends Breakpoints>(
     return () => {
       observer.disconnect();
       throttledResize.cancel();
-      throttledResizeRef.current = null;
     };
-  }, [element, isEnabled, throttleTime]);
+  }, [isEnabled, throttleTime, handleResize]);
 
   const ref = useCallback((node: HTMLElement | null) => {
     setElement(node);

@@ -4,6 +4,8 @@
 
 React hook that tracks the width of a container element and returns the name of the current breakpoint based on a provided map of breakpoints. This is useful when you want to build container-based responsive behaviour instead of relying only on global window breakpoints.
 
+**Note:** This hook uses `ResizeObserver` API under the hood. If you need to support browsers that don't have native `ResizeObserver` support, you must provide a polyfill on your own.
+
 ### Options
 
 - `breakpoints` (required): A map where keys are breakpoint names and values are minimum container widths in pixels.
@@ -18,13 +20,13 @@ JSX
 import React from 'react';
 import { useContainerSize } from '@kommo-crm/react-hooks';
 
-const Demo: React.FC = () => {
-  const breakpoints = {
-    mobile: 0,
-    tablet: 768,
-    desktop: 1024,
-  } as const;
+const breakpoints = {
+  mobile: 0,
+  tablet: 768,
+  desktop: 1024,
+} as const;
 
+const Demo: React.FC = () => {
   const { ref, size, width } = useContainerSize({ breakpoints });
 
   return (

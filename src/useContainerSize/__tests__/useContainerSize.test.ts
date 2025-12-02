@@ -2,25 +2,60 @@ import { act, renderHook } from '@testing-library/react-hooks';
 import { Breakpoints, useContainerSize } from '../useContainerSize';
 
 describe('useContainerSize', () => {
+  /**
+   * Array to store all ResizeObserver callbacks.
+   * This allows us to manually invoke callbacks in tests to simulate element size changes.
+   * Every time the hook creates a new ResizeObserver, its callback is added to this array.
+   */
   const observerCallbacks: ResizeObserverCallback[] = [];
 
   beforeAll(() => {
+    /**
+     * Mock for ResizeObserver API.
+     * ResizeObserver may not be available in test environment (e.g., in jsdom),
+     * so we create a mock that mimics the behavior of the real ResizeObserver.
+     *
+     * How it works:
+     * 1. When the hook creates ResizeObserver, constructor is called with a callback
+     * 2. Callback is stored in observerCallbacks for manual invocation in tests
+     * 3. When observe() is called, callback is invoked immediately (for initial measurement)
+     * 4. In tests we can manually invoke callback via updateElementWidth to simulate resize
+     */
     class ResizeObserverMock implements ResizeObserver {
       private readonly callback: ResizeObserverCallback;
 
+      /**
+       * Stores callback and adds it to observerCallbacks for manual invocation
+       * in tests via updateElementWidth.
+       * @param {Function} callback - Callback function that will be called when element size changes
+       */
       constructor(callback: ResizeObserverCallback) {
         this.callback = callback;
         observerCallbacks.push(callback);
       }
 
+      /**
+       * Simulates subscription to element size changes.
+       * Immediately invokes callback for initial element size measurement.
+       * In real ResizeObserver, callback is invoked automatically when size changes.
+       */
       observe() {
         this.callback([], this);
       }
 
+      /**
+       * Simulates unsubscribing from observing a specific element.
+       * Not used in tests, so left empty.
+       * Required by ResizeObserver interface, otherwise linter will complain.
+       */
       unobserve() {
         // noop
       }
 
+      /**
+       * Simulates disconnecting observer and removes callback from observerCallbacks.
+       * This is called during cleanup in useLayoutEffect.
+       */
       disconnect() {
         const index = observerCallbacks.indexOf(this.callback);
         if (index > -1) {
@@ -29,6 +64,7 @@ describe('useContainerSize', () => {
       }
     }
 
+    // Replace global ResizeObserver with our mock for all tests
     global.ResizeObserver = ResizeObserverMock;
   });
 
@@ -46,9 +82,7 @@ describe('useContainerSize', () => {
       configurable: true,
       get: () => newWidth,
     });
-  };
 
-  const simulateResize = (): void => {
     const callback = observerCallbacks[observerCallbacks.length - 1];
     if (callback) {
       act(() => {
@@ -94,7 +128,7 @@ describe('useContainerSize', () => {
     expect(result.current.width).toBe(500);
   });
 
-  it('should return null when isEnabled is false', async () => {
+  it('should measure size when isEnabled is false but not listen to changes', async () => {
     const breakpoints = {
       sm: 0,
       md: 400,
@@ -113,8 +147,8 @@ describe('useContainerSize', () => {
       await waitForNextUpdate();
     });
 
-    expect(result.current.size).toBeNull();
-    expect(result.current.width).toBeNull();
+    expect(result.current.size).toBe('md');
+    expect(result.current.width).toBe(500);
   });
 
   it('should use custom throttleTime when provided', async () => {
@@ -185,13 +219,19 @@ describe('useContainerSize', () => {
     expect(result.current.width).toBe(500);
 
     updateElementWidth(element, 900);
-    simulateResize();
+    // Wait for throttle to process
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     expect(result.current.size).toBe('lg');
     expect(result.current.width).toBe(900);
 
     updateElementWidth(element, 300);
-    simulateResize();
+    // Wait for throttle to process
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     expect(result.current.size).toBe('sm');
     expect(result.current.width).toBe(300);
@@ -217,19 +257,17 @@ describe('useContainerSize', () => {
       result.current.ref(element);
     });
 
-    expect(result.current.size).toBeNull();
-    expect(result.current.width).toBeNull();
+    expect(result.current.size).toBe('md');
+    expect(result.current.width).toBe(500);
 
     updateElementWidth(element, 900);
-    simulateResize();
 
-    expect(result.current.size).toBeNull();
-    expect(result.current.width).toBeNull();
+    expect(result.current.size).toBe('md');
+    expect(result.current.width).toBe(500);
 
     updateElementWidth(element, 300);
-    simulateResize();
 
-    expect(result.current.size).toBeNull();
-    expect(result.current.width).toBeNull();
+    expect(result.current.size).toBe('md');
+    expect(result.current.width).toBe(500);
   });
 });
