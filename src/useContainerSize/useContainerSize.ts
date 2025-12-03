@@ -1,4 +1,10 @@
-import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { throttle } from 'throttle-debounce';
 
 export type Breakpoints = Record<string, number>;
@@ -88,7 +94,7 @@ export const useContainerSize = <T extends Breakpoints>(
   });
 
   const handleResize = useCallback(() => {
-    if (!element || !isEnabled) {
+    if (!element) {
       return;
     }
 
@@ -102,7 +108,17 @@ export const useContainerSize = <T extends Breakpoints>(
     setWidth((prev) => {
       return prev === newWidth ? prev : newWidth;
     });
-  }, [element, getCurrentSize, isEnabled]);
+  }, [element, getCurrentSize]);
+
+  useEffect(() => {
+    if (!element) {
+      setSize(null);
+      setWidth(null);
+      return;
+    }
+
+    handleResize();
+  }, [element]);
 
   useLayoutEffect(() => {
     if (!element || !isEnabled) {
@@ -120,8 +136,6 @@ export const useContainerSize = <T extends Breakpoints>(
       noLeading: false,
       noTrailing: false,
     });
-
-    throttledResize();
 
     const observer = new ResizeObserver(throttledResize);
 

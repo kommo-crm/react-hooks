@@ -174,7 +174,8 @@ const Template: StoryFn = () => {
         </p>
         <p style={{ marginTop: 8, color: '#666', fontSize: 14 }}>
           Hook enabled: <strong>{isEnabled ? 'Yes' : 'No'}</strong>
-          {!isEnabled && ' (size and width should be null)'}
+          {!isEnabled &&
+            ' (size and width are measured once and do not update on resize)'}
         </p>
       </div>
     </div>
