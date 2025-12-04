@@ -120,7 +120,7 @@ const Template: StoryFn = () => {
             min={0}
             value={breakpoints.mobile}
             onChange={handleMobileBreakpointChange}
-            style={{ marginLeft: 8, width: 80 }}
+            style={{ marginLeft: 17, width: 80 }}
           />
           <span style={{ marginLeft: 8, fontSize: 12, color: '#666' }}>px</span>
         </label>
@@ -131,7 +131,7 @@ const Template: StoryFn = () => {
             min={0}
             value={breakpoints.tablet}
             onChange={handleTabletBreakpointChange}
-            style={{ marginLeft: 8, width: 80 }}
+            style={{ marginLeft: 23, width: 80 }}
           />
           <span style={{ marginLeft: 8, fontSize: 12, color: '#666' }}>px</span>
         </label>

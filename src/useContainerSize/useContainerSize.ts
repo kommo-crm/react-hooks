@@ -36,16 +36,20 @@ export interface UseContainerSizeResult<T extends Breakpoints> {
 }
 
 /**
- * Internal type representing a parsed breakpoint with name and value.
+ * Internal interface representing a parsed breakpoint with name and value.
  * @property {string} name - Breakpoint name.
  * @property {number} value - Breakpoint value in pixels.
  */
-type ParsedBreakpoint = {
-  /** Breakpoint name. */
+interface ParsedBreakpoint {
+  /**
+   * Breakpoint name.
+   */
   name: string;
-  /** Breakpoint value in pixels. */
+  /**
+   * Breakpoint value in pixels.
+   */
   value: number;
-};
+}
 
 /**
  * Pure function that determines the current breakpoint based on width.
@@ -54,10 +58,10 @@ type ParsedBreakpoint = {
  * @param {ParsedBreakpoint[]} parsedBreakpoints - Array of breakpoints sorted by value in ascending order.
  * @returns {keyof T | null} The breakpoint name that matches the width, or null if no breakpoint matches.
  */
-function getCurrentSize<T extends Breakpoints>(
+const getCurrentSize = <T extends Breakpoints>(
   width: number,
   parsedBreakpoints: ParsedBreakpoint[]
-): keyof T | null {
+): keyof T | null => {
   for (let i = parsedBreakpoints.length - 1; i >= 0; i--) {
     if (width >= parsedBreakpoints[i].value) {
       return parsedBreakpoints[i].name as keyof T;
@@ -65,14 +69,16 @@ function getCurrentSize<T extends Breakpoints>(
   }
 
   return null;
-}
+};
 
 /**
  * React hook that tracks container width and returns a breakpoint name
  * based on the provided breakpoints map.
  * The hook uses ResizeObserver under the hood and throttles resize events.
+ * @template T - Type extending Breakpoints.
+ * @param {UseContainerSizeOptions<T>} options - Configuration options for the hook.
+ * @returns {UseContainerSizeResult<T>} Object containing ref callback, current size, and width.
  */
-
 export const useContainerSize = <T extends Breakpoints>(
   options: UseContainerSizeOptions<T>
 ): UseContainerSizeResult<T> => {
@@ -95,6 +101,7 @@ export const useContainerSize = <T extends Breakpoints>(
 
   const handleResize = useCallback(() => {
     const element = elementRef.current;
+
     if (!element) {
       return;
     }
