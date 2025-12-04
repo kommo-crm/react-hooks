@@ -3,11 +3,23 @@ import { Breakpoints, useContainerSize } from '../useContainerSize';
 
 describe('useContainerSize', () => {
   /**
-   * Array to store all ResizeObserver callbacks.
-   * This allows us to manually invoke callbacks in tests to simulate element size changes.
-   * Every time the hook creates a new ResizeObserver, its callback is added to this array.
+   * Interface representing a pair of element and its associated callback.
+   * This allows us to find the correct callback for a specific element
+   * when manually invoking callbacks in tests to simulate element size changes.
+   * @property {HTMLElement} element - The element being observed.
+   * @property {ResizeObserverCallback} callback - The callback function for this element.
    */
-  const observerCallbacks: ResizeObserverCallback[] = [];
+  interface ElementCallbackPair {
+    /**
+     * The element being observed.
+     */
+    element: HTMLElement;
+    /**
+     * The callback function for this element.
+     */
+    callback: ResizeObserverCallback;
+  }
+  const elementCallbacks: ElementCallbackPair[] = [];
 
   beforeAll(() => {
     /**
@@ -17,50 +29,67 @@ describe('useContainerSize', () => {
      *
      * How it works:
      * 1. When the hook creates ResizeObserver, constructor is called with a callback
-     * 2. Callback is stored in observerCallbacks for manual invocation in tests
-     * 3. When observe() is called, callback is invoked immediately (for initial measurement)
+     * 2. When observe(element) is called, callback is stored in elementCallbacks array
+     * 3. Callback is invoked immediately (for initial measurement)
      * 4. In tests we can manually invoke callback via updateElementWidth to simulate resize
      */
     class ResizeObserverMock implements ResizeObserver {
       private readonly callback: ResizeObserverCallback;
+      private readonly observedElements: HTMLElement[] = [];
 
       /**
-       * Stores callback and adds it to observerCallbacks for manual invocation
-       * in tests via updateElementWidth.
+       * Stores callback for later use when observe() is called.
        * @param {Function} callback - Callback function that will be called when element size changes
        */
       constructor(callback: ResizeObserverCallback) {
         this.callback = callback;
-        observerCallbacks.push(callback);
       }
 
       /**
        * Simulates subscription to element size changes.
-       * Immediately invokes callback for initial element size measurement.
+       * Stores the element -> callback mapping and immediately invokes callback
+       * for initial element size measurement.
        * In real ResizeObserver, callback is invoked automatically when size changes.
+       * @param {HTMLElement} element - Element to observe
        */
-      observe() {
+      observe(element: HTMLElement) {
+        this.observedElements.push(element);
+        elementCallbacks.push({ element, callback: this.callback });
         this.callback([], this);
       }
 
       /**
        * Simulates unsubscribing from observing a specific element.
-       * Not used in tests, so left empty.
-       * Required by ResizeObserver interface, otherwise linter will complain.
+       * Removes the element from the mapping.
+       * @param {HTMLElement} element - Element to stop observing
        */
-      unobserve() {
-        // noop
+      unobserve(element: HTMLElement) {
+        const index = this.observedElements.indexOf(element);
+        if (index > -1) {
+          this.observedElements.splice(index, 1);
+        }
+        const callbackIndex = elementCallbacks.findIndex(
+          (pair) => pair.element === element
+        );
+        if (callbackIndex > -1) {
+          elementCallbacks.splice(callbackIndex, 1);
+        }
       }
 
       /**
-       * Simulates disconnecting observer and removes callback from observerCallbacks.
+       * Simulates disconnecting observer and removes all element mappings.
        * This is called during cleanup in useLayoutEffect.
        */
       disconnect() {
-        const index = observerCallbacks.indexOf(this.callback);
-        if (index > -1) {
-          observerCallbacks.splice(index, 1);
-        }
+        this.observedElements.forEach((element) => {
+          const callbackIndex = elementCallbacks.findIndex(
+            (pair) => pair.element === element
+          );
+          if (callbackIndex > -1) {
+            elementCallbacks.splice(callbackIndex, 1);
+          }
+        });
+        this.observedElements.length = 0;
       }
     }
 
@@ -83,10 +112,10 @@ describe('useContainerSize', () => {
       get: () => newWidth,
     });
 
-    const callback = observerCallbacks[observerCallbacks.length - 1];
-    if (callback) {
+    const pair = elementCallbacks.find((pair) => pair.element === element);
+    if (pair) {
       act(() => {
-        callback([], {} as ResizeObserver);
+        pair.callback([], {} as ResizeObserver);
       });
     }
   };
