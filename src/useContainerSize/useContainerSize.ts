@@ -71,6 +71,18 @@ const getCurrentSize = <T extends Breakpoints>(
   return null;
 };
 
+type ContainerState<T extends Breakpoints> = {
+  /**
+   * Current breakpoint name that matches the container width,
+   * or null if no breakpoint matches.
+   */
+  size: keyof T | null;
+  /**
+   * Current container width in pixels, or null if element is not attached.
+   */
+  width: number | null;
+};
+
 /**
  * React hook that tracks container width and returns a breakpoint name
  * based on the provided breakpoints map.
@@ -87,17 +99,33 @@ export const useContainerSize = <T extends Breakpoints>(
   const elementRef = useRef<HTMLElement | null>(null);
 
   const parsedBreakpoints = useMemo(() => {
-    return Object.entries(breakpoints)
-      .map(([name, value]) => {
-        return { name, value };
-      })
-      .sort((a, b) => {
-        return a.value - b.value;
-      });
+    return (
+      /**
+       * Sort by value in ascending order to ensure correct breakpoint matching.
+       * The getCurrentSize function iterates from the end and finds the largest
+       * breakpoint that matches the current width, which requires a sorted array.
+       *
+       * Example:
+       * - Breakpoints: { mobile: 0, tablet: 768, desktop: 1200 }
+       * - After sorting: [{ name: 'mobile', value: 0 }, { name: 'tablet', value: 768 }, { name: 'desktop', value: 1200
+       * }]
+       * - For width = 1000px: iterates from end, finds tablet (1000 >= 768), returns 'tablet'
+       * - Without sorting: could return wrong breakpoint if order is different
+       */
+      Object.entries(breakpoints)
+        .map(([name, value]) => {
+          return { name, value };
+        })
+        .sort((a, b) => {
+          return a.value - b.value;
+        })
+    );
   }, [breakpoints]);
 
-  const [size, setSize] = useState<keyof T | null>(null);
-  const [width, setWidth] = useState<number | null>(null);
+  const [state, setState] = useState<ContainerState<T>>({
+    size: null,
+    width: null,
+  });
 
   const handleResize = useCallback(() => {
     const element = elementRef.current;
@@ -109,12 +137,18 @@ export const useContainerSize = <T extends Breakpoints>(
     const newWidth = element.offsetWidth;
     const newSize = getCurrentSize<T>(newWidth, parsedBreakpoints);
 
-    setSize((prev) => {
-      return prev === newSize ? prev : newSize;
-    });
+    setState((prev) => {
+      const sameWidth = prev.width === newWidth;
+      const sameSize = prev.size === newSize;
 
-    setWidth((prev) => {
-      return prev === newWidth ? prev : newWidth;
+      if (sameWidth && sameSize) {
+        return prev;
+      }
+
+      return {
+        width: newWidth,
+        size: newSize,
+      };
     });
   }, [parsedBreakpoints]);
 
@@ -144,7 +178,7 @@ export const useContainerSize = <T extends Breakpoints>(
       observer.disconnect();
       throttledResize.cancel();
     };
-  }, [isEnabled, throttleTime, handleResize]);
+  }, [elementRef.current, isEnabled, throttleTime, handleResize]);
 
   const ref = useCallback(
     (node: HTMLElement | null) => {
@@ -152,12 +186,18 @@ export const useContainerSize = <T extends Breakpoints>(
       if (node) {
         handleResize();
       } else {
-        setSize(null);
-        setWidth(null);
+        setState({
+          size: null,
+          width: null,
+        });
       }
     },
     [handleResize]
   );
 
-  return { ref, size, width };
+  return {
+    ref,
+    size: state.size,
+    width: state.width,
+  };
 };
