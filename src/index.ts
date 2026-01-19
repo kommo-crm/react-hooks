@@ -9,4 +9,5 @@ export { useOnOutsideMouseMove } from './useOnOutsideMouseMove';
 export { usePrevious } from './usePrevious';
 export { useIsTouchDevice } from './useIsTouchDevice';
 export { useMenuAim } from './useMenuAim';
+
 export type { UseMenuAimOptions, MenuAimDirection } from './useMenuAim';

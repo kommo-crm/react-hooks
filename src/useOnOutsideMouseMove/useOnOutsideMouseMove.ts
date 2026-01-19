@@ -19,6 +19,8 @@ export const useOnOutsideMouseMove = (
 
     document.addEventListener('mousemove', handleMouseMove);
 
-    return () => document.removeEventListener('mousemove', handleMouseMove);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+    };
   }, [ref, callback]);
 };
