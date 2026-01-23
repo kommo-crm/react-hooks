@@ -19,7 +19,10 @@ const Template: StoryFn = () => {
     });
   }, []);
 
-  useOnOutsideMouseMove(containerRef, handleOutsideMove);
+  useOnOutsideMouseMove({
+    ref: containerRef,
+    handler: handleOutsideMove,
+  });
 
   const handleMouseEnter = useCallback(() => {
     setIsHovered(true);

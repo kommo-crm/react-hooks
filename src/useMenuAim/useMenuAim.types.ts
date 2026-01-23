@@ -60,7 +60,7 @@ export interface UseMenuAimOptions {
    * When disabled, the hook becomes a no-op.
    * @default true
    */
-  enabled?: boolean;
+  isEnabled?: boolean;
   /**
    * Optional external ref to use instead of creating a new one.
    * If provided, this ref will be updated directly.
@@ -68,6 +68,10 @@ export interface UseMenuAimOptions {
   externalAimingRef?:
     | React.MutableRefObject<boolean>
     | React.RefObject<boolean>;
+  /**
+   * A callback that will work when isAiming changes.
+   */
+  handler?: (isAiming: boolean) => void;
 }
 
 /**
@@ -75,19 +79,9 @@ export interface UseMenuAimOptions {
  */
 export interface UseMenuAimResult<T extends HTMLElement = HTMLElement> {
   /**
-   * Ref containing whether the mouse is currently moving
-   * toward the menu/submenu.
-   *
-   * When this is true:
-   *  - closing of the current menu should be delayed
-   *  - opening of sibling menus should be blocked
+   * Returns whether the mouse is currently moving toward the menu/submenu.
    */
-  isAimingRef: React.MutableRefObject<boolean>;
-  /**
-   * Resets all internal tracking state.
-   * Should be called when the menu is fully closed.
-   */
-  reset: () => void;
+  isAiming: () => boolean;
   /**
    * The delay that should be applied when movement
    * toward the menu is detected.

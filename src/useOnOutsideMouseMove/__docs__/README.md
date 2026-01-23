@@ -2,6 +2,8 @@
 
 React hook that tracks mouse movements outside of a specified element. Useful for detecting when the cursor leaves a component area, such as resetting pseudo-focus states or triggering hover-out behaviors.
 
+Uses a subscribe/unsubscribe pattern with a single global event listener for optimal performance.
+
 ## Usage
 
 ```jsx
@@ -20,7 +22,10 @@ const Demo: React.FC = () => {
     setIsHovered(true);
   };
 
-  useOnOutsideMouseMove(containerRef, handleOutsideMove);
+  useOnOutsideMouseMove({
+    ref: containerRef,
+    handler: handleOutsideMove,
+  });
 
   return (
     <div
@@ -40,8 +45,11 @@ const Demo: React.FC = () => {
 ## Reference
 
 ```ts
-useOnOutsideMouseMove(ref, callback);
+useOnOutsideMouseMove(options);
 ```
 
-- **`ref`**_`: React.RefObject<HTMLElement>`_ - ref to the element to track mouse movements outside of;
-- **`callback`**_`: (event: MouseEvent) => void`_ - function called when mouse moves outside the referenced element;
+### Options
+
+- **`ref`**_`: React.MutableRefObject<HTMLElement | null>`_ - ref to the element to track mouse movements outside of;
+- **`handler`**_`: (event: MouseEvent) => unknown`_ - function called when mouse moves outside the referenced element;
+- **`context`**_`: string`_ - context for grouping handlers (default: `'global'`). Handlers of one context will not affect handlers of other contexts;

@@ -32,12 +32,18 @@ const getMenuDirectionVector = (
   switch (direction) {
     case MenuAimDirection.LEFT:
       return { x: -1, y: 0 };
+
     case MenuAimDirection.RIGHT:
       return { x: 1, y: 0 };
+
     case MenuAimDirection.TOP:
       return { x: 0, y: -1 };
+
     case MenuAimDirection.BOTTOM:
       return { x: 0, y: 1 };
+
+    default:
+      return { x: 0, y: 0 };
   }
 };
 
@@ -63,31 +69,45 @@ const getContentEdge = (
         { x: r.left + scrollX, y: r.top - tolerance + scrollY },
         { x: r.left + scrollX, y: r.bottom + tolerance + scrollY },
       ];
+
     case MenuAimDirection.LEFT:
       return [
         { x: r.right + scrollX, y: r.top - tolerance + scrollY },
         { x: r.right + scrollX, y: r.bottom + tolerance + scrollY },
       ];
+
     case MenuAimDirection.BOTTOM:
       return [
         { x: r.left - tolerance + scrollX, y: r.top + scrollY },
         { x: r.right + tolerance + scrollX, y: r.top + scrollY },
       ];
+
     case MenuAimDirection.TOP:
       return [
         { x: r.left - tolerance + scrollX, y: r.bottom + scrollY },
         { x: r.right + tolerance + scrollX, y: r.bottom + scrollY },
       ];
+
+    default:
+      return [
+        { x: 0, y: 0 },
+        { x: 0, y: 0 },
+      ];
   }
 };
 
-export const useMenuAim = <T extends HTMLElement = HTMLElement>({
-  direction,
-  tolerance = DEFAULT_TOLERANCE,
-  switchDelay = DEFAULT_SWITCH_DELAY,
-  enabled = true,
-  externalAimingRef,
-}: UseMenuAimOptions): UseMenuAimResult<T> => {
+export const useMenuAim = <T extends HTMLElement = HTMLElement>(
+  options: UseMenuAimOptions
+): UseMenuAimResult<T> => {
+  const {
+    direction,
+    tolerance = DEFAULT_TOLERANCE,
+    switchDelay = DEFAULT_SWITCH_DELAY,
+    isEnabled = true,
+    externalAimingRef,
+    handler,
+  } = options;
+
   const contentRef = useRef<T>(null);
 
   /**
@@ -108,6 +128,20 @@ export const useMenuAim = <T extends HTMLElement = HTMLElement>({
   const timeoutRef = useRef<number | null>(null);
 
   /**
+   * Updates the aiming state and calls handler if value changed.
+   * @param {boolean} value - The new aiming state.
+   */
+  const setIsAiming = (value: boolean) => {
+    isAimingRef.current = value;
+
+    handler?.(value);
+  };
+
+  const getIsAiming = () => {
+    return isAimingRef.current;
+  };
+
+  /**
    * Recalculates whether the cursor is moving toward the submenu.
    */
   const recalc = useCallback(() => {
@@ -116,7 +150,7 @@ export const useMenuAim = <T extends HTMLElement = HTMLElement>({
     const el = contentRef.current;
 
     if (!cursor || !prev || !el) {
-      isAimingRef.current = false;
+      setIsAiming(false);
 
       return;
     }
@@ -129,7 +163,7 @@ export const useMenuAim = <T extends HTMLElement = HTMLElement>({
     const inTriangle = pointInTriangle(cursor, prev, edgeA, edgeB);
 
     if (!inTriangle) {
-      isAimingRef.current = false;
+      setIsAiming(false);
 
       return;
     }
@@ -137,12 +171,14 @@ export const useMenuAim = <T extends HTMLElement = HTMLElement>({
     const dirVector = getMenuDirectionVector(direction);
     const movingToward = isAiming(prev, cursor, dirVector);
 
-    isAimingRef.current = movingToward;
-  }, [contentRef, direction, tolerance]);
+    setIsAiming(movingToward);
+  }, [contentRef, direction, tolerance, setIsAiming]);
 
   useEffect(() => {
-    if (!enabled) {
-      isAimingRef.current = false;
+    if (!isEnabled) {
+      setIsAiming(false);
+      lastCursorRef.current = null;
+      prevCursorRef.current = null;
 
       return;
     }
@@ -180,20 +216,10 @@ export const useMenuAim = <T extends HTMLElement = HTMLElement>({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [enabled, recalc]);
-
-  /**
-   * Resets internal state (useful when menu is closed).
-   */
-  const reset = useCallback(() => {
-    isAimingRef.current = false;
-    lastCursorRef.current = null;
-    prevCursorRef.current = null;
-  }, []);
+  }, [isEnabled, recalc, setIsAiming]);
 
   return {
-    isAimingRef,
-    reset,
+    isAiming: getIsAiming,
     switchDelay,
     contentRef,
   };

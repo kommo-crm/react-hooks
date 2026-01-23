@@ -30,26 +30,25 @@ const Template: StoryFn<TemplateArgs> = (args: TemplateArgs) => {
 
   const [activeItem, setActiveItem] = useState<string | null>(null);
 
-  const { contentRef, isAimingRef, reset } = useMenuAim<HTMLDivElement>({
+  const { contentRef, isAiming } = useMenuAim<HTMLDivElement>({
     direction,
     tolerance,
     switchDelay,
-    enabled: true,
+    isEnabled: true,
   });
 
   const handleItemHover = useCallback(
     (item: string) => {
-      if (!isAimingRef.current) {
+      if (!isAiming()) {
         setActiveItem(item);
       }
     },
-    [isAimingRef]
+    [isAiming]
   );
 
-  const handleMenuLeave = useCallback(() => {
+  const handleMenuLeave = () => {
     setActiveItem(null);
-    reset();
-  }, [reset]);
+  };
 
   return (
     <div>

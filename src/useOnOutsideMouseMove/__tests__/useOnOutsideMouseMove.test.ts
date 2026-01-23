@@ -21,43 +21,11 @@ describe('useOnOutsideMouseMove', () => {
     expect(useOnOutsideMouseMove).toBeDefined();
   });
 
-  it('should add mousemove event listener on mount', () => {
-    const addEventListenerSpy = jest.spyOn(document, 'addEventListener');
+  it('should call handler when mouse moves outside element', () => {
     const ref = { current: container };
-    const callback = jest.fn();
+    const handler = jest.fn();
 
-    renderHook(() => useOnOutsideMouseMove(ref, callback));
-
-    expect(addEventListenerSpy).toHaveBeenCalledWith(
-      'mousemove',
-      expect.any(Function)
-    );
-
-    addEventListenerSpy.mockRestore();
-  });
-
-  it('should remove mousemove event listener on unmount', () => {
-    const removeEventListenerSpy = jest.spyOn(document, 'removeEventListener');
-    const ref = { current: container };
-    const callback = jest.fn();
-
-    const { unmount } = renderHook(() => useOnOutsideMouseMove(ref, callback));
-
-    unmount();
-
-    expect(removeEventListenerSpy).toHaveBeenCalledWith(
-      'mousemove',
-      expect.any(Function)
-    );
-
-    removeEventListenerSpy.mockRestore();
-  });
-
-  it('should call callback when mouse moves outside element', () => {
-    const ref = { current: container };
-    const callback = jest.fn();
-
-    renderHook(() => useOnOutsideMouseMove(ref, callback));
+    renderHook(() => useOnOutsideMouseMove({ ref, handler }));
 
     const event = new MouseEvent('mousemove', {
       bubbles: true,
@@ -69,15 +37,15 @@ describe('useOnOutsideMouseMove', () => {
 
     document.dispatchEvent(event);
 
-    expect(callback).toHaveBeenCalledTimes(1);
-    expect(callback).toHaveBeenCalledWith(event);
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith(event);
   });
 
-  it('should not call callback when mouse moves inside element', () => {
+  it('should not call handler when mouse moves inside element', () => {
     const ref = { current: container };
-    const callback = jest.fn();
+    const handler = jest.fn();
 
-    renderHook(() => useOnOutsideMouseMove(ref, callback));
+    renderHook(() => useOnOutsideMouseMove({ ref, handler }));
 
     const event = new MouseEvent('mousemove', {
       bubbles: true,
@@ -89,14 +57,14 @@ describe('useOnOutsideMouseMove', () => {
 
     document.dispatchEvent(event);
 
-    expect(callback).not.toHaveBeenCalled();
+    expect(handler).not.toHaveBeenCalled();
   });
 
-  it('should not call callback when ref.current is null', () => {
+  it('should not call handler when ref.current is null', () => {
     const ref = { current: null };
-    const callback = jest.fn();
+    const handler = jest.fn();
 
-    renderHook(() => useOnOutsideMouseMove(ref, callback));
+    renderHook(() => useOnOutsideMouseMove({ ref, handler }));
 
     const event = new MouseEvent('mousemove', {
       bubbles: true,
@@ -104,17 +72,17 @@ describe('useOnOutsideMouseMove', () => {
 
     document.dispatchEvent(event);
 
-    expect(callback).not.toHaveBeenCalled();
+    expect(handler).not.toHaveBeenCalled();
   });
 
-  it('should not call callback when mouse moves over child element', () => {
+  it('should not call handler when mouse moves over child element', () => {
     const childElement = document.createElement('span');
     container.appendChild(childElement);
 
     const ref = { current: container };
-    const callback = jest.fn();
+    const handler = jest.fn();
 
-    renderHook(() => useOnOutsideMouseMove(ref, callback));
+    renderHook(() => useOnOutsideMouseMove({ ref, handler }));
 
     const event = new MouseEvent('mousemove', {
       bubbles: true,
@@ -126,24 +94,32 @@ describe('useOnOutsideMouseMove', () => {
 
     document.dispatchEvent(event);
 
-    expect(callback).not.toHaveBeenCalled();
+    expect(handler).not.toHaveBeenCalled();
   });
 
-  it('should update callback when it changes', () => {
+  it('should update handler when it changes', () => {
     const ref = { current: container };
-    const callback1 = jest.fn();
-    const callback2 = jest.fn();
+    const handler1 = jest.fn();
+    const handler2 = jest.fn();
 
     const { rerender } = renderHook(
-      ({ callback }) => useOnOutsideMouseMove(ref, callback),
-      { initialProps: { callback: callback1 } }
+      function renderHookFn(props: {
+        /**
+         * Handler to be called when mouse moves outside the element.
+         */
+        handler: (event: MouseEvent) => void;
+      }) {
+        return useOnOutsideMouseMove({ ref, handler: props.handler });
+      },
+      { initialProps: { handler: handler1 } }
     );
 
-    rerender({ callback: callback2 });
+    rerender({ handler: handler2 });
 
     const event = new MouseEvent('mousemove', {
       bubbles: true,
     });
+
     Object.defineProperty(event, 'target', {
       value: outsideElement,
       writable: false,
@@ -151,7 +127,68 @@ describe('useOnOutsideMouseMove', () => {
 
     document.dispatchEvent(event);
 
-    expect(callback1).not.toHaveBeenCalled();
-    expect(callback2).toHaveBeenCalledTimes(1);
+    expect(handler1).not.toHaveBeenCalled();
+    expect(handler2).toHaveBeenCalledTimes(1);
+  });
+
+  it('should unsubscribe handler on unmount', () => {
+    const ref = { current: container };
+    const handler = jest.fn();
+
+    const { unmount } = renderHook(() => {
+      return useOnOutsideMouseMove({ ref, handler });
+    });
+
+    unmount();
+
+    const event = new MouseEvent('mousemove', {
+      bubbles: true,
+    });
+
+    Object.defineProperty(event, 'target', {
+      value: outsideElement,
+      writable: false,
+    });
+
+    document.dispatchEvent(event);
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('should support context for grouping handlers', () => {
+    const ref1 = { current: container };
+    const ref2 = { current: outsideElement };
+    const handler1 = jest.fn();
+    const handler2 = jest.fn();
+
+    renderHook(() =>
+      useOnOutsideMouseMove({
+        ref: ref1,
+        handler: handler1,
+        context: 'context1',
+      })
+    );
+
+    renderHook(() =>
+      useOnOutsideMouseMove({
+        ref: ref2,
+        handler: handler2,
+        context: 'context2',
+      })
+    );
+
+    const event = new MouseEvent('mousemove', {
+      bubbles: true,
+    });
+
+    Object.defineProperty(event, 'target', {
+      value: document.body,
+      writable: false,
+    });
+
+    document.dispatchEvent(event);
+
+    expect(handler1).toHaveBeenCalledTimes(1);
+    expect(handler2).toHaveBeenCalledTimes(1);
   });
 });

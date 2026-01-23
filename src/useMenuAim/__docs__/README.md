@@ -25,33 +25,31 @@ import { useMenuAim, MenuAimDirection } from '@packages/react-hooks';
 const Demo: React.FC = () => {
   const [activeItem, setActiveItem] = useState<string | null>(null);
 
-  const { contentRef, isAimingRef, reset } = useMenuAim({
+  const { contentRef, isAiming } = useMenuAim({
     direction: MenuAimDirection.RIGHT,
     tolerance: 40,
-    switchDelay: 200,
   });
 
   const handleItemHover = useCallback(
     (item: string) => {
       // Don't switch when user is aiming toward submenu
-      if (!isAimingRef.current) {
+      if (!isAiming()) {
         setActiveItem(item);
       }
     },
-    [isAimingRef]
+    [isAiming]
   );
 
-  const handleMenuLeave = useCallback(() => {
+  const handleMenuLeave = () => {
     setActiveItem(null);
-    reset();
-  }, [reset]);
+  };
 
   const handleFirstItemMouseEnter = () => {
-    return handleItemHover('item1');
+    handleItemHover('item1');
   };
 
   const handleSecondItemMouseEnter = () => {
-    return handleItemHover('item2');
+    handleItemHover('item2');
   };
 
   return (
@@ -74,7 +72,7 @@ const Demo: React.FC = () => {
 ## Reference
 
 ```ts
-const { contentRef, isAimingRef, switchDelay, reset } = useMenuAim(options);
+const { contentRef, isAiming, switchDelay } = useMenuAim(options);
 ```
 
 ### Options
@@ -82,12 +80,11 @@ const { contentRef, isAimingRef, switchDelay, reset } = useMenuAim(options);
 - **`direction`**_`: MenuAimDirection`_ - direction in which the submenu opens (`'top'`, `'right'`, `'bottom'`, `'left'`);
 - **`tolerance`**_`: number`_ - pixel tolerance added to menu bounds (default: `40`);
 - **`switchDelay`**_`: number`_ - delay in ms before allowing menu switching when aiming (default: `200`);
-- **`enabled`**_`: boolean`_ - enables or disables the menu aim logic (default: `true`);
+- **`isEnabled`**_`: boolean`_ - enables or disables the menu aim logic (default: `true`);
 - **`externalAimingRef`**_`: React.MutableRefObject<boolean>`_ - optional external ref to use instead of creating a new one;
 
 ### Return Value
 
 - **`contentRef`**_`: React.RefObject<T>`_ - ref to attach to the submenu DOM element;
-- **`isAimingRef`**_`: React.MutableRefObject<boolean>`_ - ref containing whether the mouse is currently moving toward the menu;
+- **`isAiming`**_`: () => boolean`_ - function that returns whether the mouse is currently moving toward the menu;
 - **`switchDelay`**_`: number`_ - the configured delay value;
-- **`reset`**_`: () => void`_ - function to reset all internal tracking state;

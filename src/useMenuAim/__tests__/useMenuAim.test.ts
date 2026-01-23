@@ -25,9 +25,8 @@ describe('useMenuAim', () => {
     );
 
     expect(result.current).toHaveProperty('contentRef');
-    expect(result.current).toHaveProperty('isAimingRef');
+    expect(result.current).toHaveProperty('isAiming');
     expect(result.current).toHaveProperty('switchDelay');
-    expect(result.current).toHaveProperty('reset');
   });
 
   it('should use default values', () => {
@@ -36,7 +35,7 @@ describe('useMenuAim', () => {
     );
 
     expect(result.current.switchDelay).toBe(200);
-    expect(result.current.isAimingRef.current).toBe(false);
+    expect(result.current.isAiming()).toBe(false);
   });
 
   it('should respect custom switchDelay', () => {
@@ -65,7 +64,7 @@ describe('useMenuAim', () => {
     addEventListenerSpy.mockClear();
 
     renderHook(() =>
-      useMenuAim({ direction: MenuAimDirection.RIGHT, enabled: false })
+      useMenuAim({ direction: MenuAimDirection.RIGHT, isEnabled: false })
     );
 
     expect(addEventListenerSpy).not.toHaveBeenCalledWith(
@@ -93,46 +92,65 @@ describe('useMenuAim', () => {
     removeEventListenerSpy.mockRestore();
   });
 
-  it('should reset isAimingRef when reset is called', () => {
-    const { result } = renderHook(() =>
-      useMenuAim({ direction: MenuAimDirection.RIGHT })
+  it('should reset isAiming when isEnabled changes to false', () => {
+    const handler = jest.fn();
+
+    const { rerender } = renderHook(
+      function renderMenuAim(props: {
+        /**
+         * Whether the hook is enabled.
+         */
+        isEnabled: boolean;
+      }) {
+        return useMenuAim({
+          direction: MenuAimDirection.RIGHT,
+          isEnabled: props.isEnabled,
+          handler,
+        });
+      },
+      { initialProps: { isEnabled: true } }
     );
 
-    // Manually set to true for testing
-    result.current.isAimingRef.current = true;
+    rerender({ isEnabled: false });
 
-    act(() => {
-      result.current.reset();
-    });
-
-    expect(result.current.isAimingRef.current).toBe(false);
+    expect(handler).toHaveBeenCalledWith(false);
   });
 
-  it('should use external aiming ref when provided', () => {
-    const externalRef = { current: false };
+  it('should call handler when isAiming changes', () => {
+    const handler = jest.fn();
 
-    const { result } = renderHook(() =>
+    renderHook(() =>
       useMenuAim({
         direction: MenuAimDirection.RIGHT,
-        externalAimingRef: externalRef,
+        handler,
       })
     );
 
-    expect(result.current.isAimingRef).toBe(externalRef);
+    expect(handler).not.toHaveBeenCalled();
   });
 
-  it('should set isAimingRef to false when enabled changes to false', () => {
-    const { result, rerender } = renderHook(
-      ({ enabled }) =>
-        useMenuAim({ direction: MenuAimDirection.RIGHT, enabled }),
-      { initialProps: { enabled: true } }
+  it('should clear cursor refs when isEnabled changes to false', () => {
+    const handler = jest.fn();
+
+    const { rerender } = renderHook(
+      function renderMenuAim(props: {
+        /**
+         * Whether the hook is enabled.
+         */
+        isEnabled: boolean;
+      }) {
+        return useMenuAim({
+          direction: MenuAimDirection.RIGHT,
+          isEnabled: props.isEnabled,
+          handler,
+        });
+      },
+      { initialProps: { isEnabled: true } }
     );
 
-    result.current.isAimingRef.current = true;
+    rerender({ isEnabled: false });
 
-    rerender({ enabled: false });
-
-    expect(result.current.isAimingRef.current).toBe(false);
+    expect(handler).toHaveBeenCalledWith(false);
   });
 
   it('should handle all direction options', () => {
@@ -147,7 +165,7 @@ describe('useMenuAim', () => {
       const { result } = renderHook(() => useMenuAim({ direction }));
 
       expect(result.current.contentRef).toBeDefined();
-      expect(result.current.isAimingRef.current).toBe(false);
+      expect(result.current.isAiming()).toBe(false);
     });
   });
 });
@@ -222,7 +240,7 @@ describe('useMenuAim aiming detection', () => {
       simulateMouseMove(100, 160);
     });
 
-    expect(result.current.isAimingRef.current).toBe(true);
+    expect(result.current.isAiming()).toBe(true);
   });
 
   it('should set isAimingRef to false when moving away from menu (RIGHT direction)', () => {
@@ -252,7 +270,7 @@ describe('useMenuAim aiming detection', () => {
       simulateMouseMove(50, 150);
     });
 
-    expect(result.current.isAimingRef.current).toBe(false);
+    expect(result.current.isAiming()).toBe(false);
   });
 
   it('should set isAimingRef to false when moving up (perpendicular to RIGHT menu)', () => {
@@ -281,7 +299,7 @@ describe('useMenuAim aiming detection', () => {
       simulateMouseMove(100, 50);
     });
 
-    expect(result.current.isAimingRef.current).toBe(false);
+    expect(result.current.isAiming()).toBe(false);
   });
 
   it('should set isAimingRef to true when moving toward menu (LEFT direction)', () => {
@@ -311,7 +329,7 @@ describe('useMenuAim aiming detection', () => {
       simulateMouseMove(200, 160);
     });
 
-    expect(result.current.isAimingRef.current).toBe(true);
+    expect(result.current.isAiming()).toBe(true);
   });
 
   it('should set isAimingRef to true when moving toward menu (BOTTOM direction)', () => {
@@ -341,7 +359,7 @@ describe('useMenuAim aiming detection', () => {
       simulateMouseMove(160, 100);
     });
 
-    expect(result.current.isAimingRef.current).toBe(true);
+    expect(result.current.isAiming()).toBe(true);
   });
 
   it('should set isAimingRef to true when moving toward menu (TOP direction)', () => {
@@ -371,7 +389,7 @@ describe('useMenuAim aiming detection', () => {
       simulateMouseMove(160, 200);
     });
 
-    expect(result.current.isAimingRef.current).toBe(true);
+    expect(result.current.isAiming()).toBe(true);
   });
 
   it('should set isAimingRef to false when contentRef is not attached', () => {
@@ -392,7 +410,7 @@ describe('useMenuAim aiming detection', () => {
       simulateMouseMove(100, 160);
     });
 
-    expect(result.current.isAimingRef.current).toBe(false);
+    expect(result.current.isAiming()).toBe(false);
   });
 
   it('should update isAimingRef when cursor changes direction', () => {
@@ -421,13 +439,13 @@ describe('useMenuAim aiming detection', () => {
       simulateMouseMove(100, 160);
     });
 
-    expect(result.current.isAimingRef.current).toBe(true);
+    expect(result.current.isAiming()).toBe(true);
 
     // Now move away from menu (back to the left)
     act(() => {
       simulateMouseMove(50, 155);
     });
 
-    expect(result.current.isAimingRef.current).toBe(false);
+    expect(result.current.isAiming()).toBe(false);
   });
 });
