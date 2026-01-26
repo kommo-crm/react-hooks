@@ -104,7 +104,6 @@ export const useMenuAim = <T extends HTMLElement = HTMLElement>(
     tolerance = DEFAULT_TOLERANCE,
     switchDelay = DEFAULT_SWITCH_DELAY,
     isEnabled = true,
-    externalAimingRef,
     handler,
   } = options;
 
@@ -115,9 +114,7 @@ export const useMenuAim = <T extends HTMLElement = HTMLElement>(
    * Exposed as a ref to avoid unnecessary re-renders.
    * Use external ref if provided, otherwise create a new one.
    */
-  const internalAimingRef = useRef(false);
-  const isAimingRef =
-    (externalAimingRef as React.MutableRefObject<boolean>) || internalAimingRef;
+  const isAimingRef = useRef(false);
 
   const lastCursorRef = useRef<Point | null>(null);
   const prevCursorRef = useRef<Point | null>(null);

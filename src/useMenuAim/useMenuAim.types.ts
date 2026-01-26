@@ -62,13 +62,6 @@ export interface UseMenuAimOptions {
    */
   isEnabled?: boolean;
   /**
-   * Optional external ref to use instead of creating a new one.
-   * If provided, this ref will be updated directly.
-   */
-  externalAimingRef?:
-    | React.MutableRefObject<boolean>
-    | React.RefObject<boolean>;
-  /**
    * A callback that will work when isAiming changes.
    */
   handler?: (isAiming: boolean) => void;
