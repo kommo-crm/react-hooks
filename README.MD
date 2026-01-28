@@ -19,8 +19,7 @@
 - `useDeepCompareEffect` - [Docs](./src/useDeepCompareEffect/__docs__/README.md)
 - `usePrevious` - [Docs](./src/usePrevious/__docs__/README.md)
 - `useIsTouchDevice` - [Docs](./src/useIsTouchDevice/__docs__/README.md)
-- `useMenuAim` - [Docs](./src/useMenuAim/__docs__/README.md)
-- `useOnOutsideMouseMove` - [Docs](./src/useOnOutsideMouseMove/__docs__/README.md)
+- `useIsAiming` - [Docs](./src/useIsAiming/__docs__/README.md)
 
 ## Commands
 

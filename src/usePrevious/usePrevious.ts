@@ -1,13 +1,26 @@
 import { useRef } from 'react';
 
-export const usePrevious = <T>(value: T): T | undefined => {
-  const currentRef = useRef<T>(value);
-  const previousRef = useRef<T | undefined>(undefined);
+interface State<T> {
+  /**
+   * The previous value.
+   */
+  previous: T | undefined;
+  /**
+   * The current value.
+   */
+  new: T;
+}
 
-  if (currentRef.current !== value) {
-    previousRef.current = currentRef.current;
-    currentRef.current = value;
+export const usePrevious = <T>(value: T): T | undefined => {
+  const stateRef = useRef<State<T>>({
+    previous: undefined,
+    new: value,
+  });
+
+  if (stateRef.current.new !== value) {
+    stateRef.current.previous = stateRef.current.new;
+    stateRef.current.new = value;
   }
 
-  return previousRef.current;
+  return stateRef.current.previous;
 };
