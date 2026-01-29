@@ -5,3 +5,6 @@ export { useIsComponentMounted } from './useIsComponentMounted';
 export { useKeyboardListNavigation } from './useKeyboardListNavigation';
 export { useOnOutsideClick } from './useOnOutsideClick';
 export { useDeepCompareEffect } from './useDeepCompareEffect';
+export { usePrevious } from './usePrevious';
+export { useIsTouchDevice } from './useIsTouchDevice';
+export { useIsAiming } from './useIsAiming';
