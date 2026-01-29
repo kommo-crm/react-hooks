@@ -58,10 +58,12 @@ const triangleArea = (a: Point, b: Point, c: Point): number => {
  * @param {HTMLElement} el - The HTML element to get vertices for.
  * @returns {[Point, Point, Point, Point]} Array of four vertices in page coordinates.
  */
-const getElementVertices = (el: HTMLElement): [Point, Point, Point, Point] => {
+export const getElementVertices = (
+  el: HTMLElement
+): [Point, Point, Point, Point] => {
   const rect = el.getBoundingClientRect();
-  const scrollX = window.pageXOffset;
-  const scrollY = window.pageYOffset;
+  const scrollX = window.scrollX;
+  const scrollY = window.scrollY;
 
   return [
     {
@@ -147,7 +149,7 @@ const lineSegmentIntersection = (
  * @param {[Point, Point, Point, Point]} rectVertices - The four vertices of the rectangle.
  * @returns {boolean} True if the point is inside the rectangle.
  */
-const pointInRectangle = (
+export const pointInRectangle = (
   p: Point,
   rectVertices: [Point, Point, Point, Point]
 ): boolean => {
@@ -283,7 +285,7 @@ const triangleRectangleOverlapArea = (
  * @param {[Point, Point, Point, Point]} vertices - The element vertices.
  * @returns {[Point, Point] | null} The best edge pair or null if not found.
  */
-const findBestIntentEdge = (
+export const findBestIntentEdge = (
   cursor: Point,
   vertices: [Point, Point, Point, Point]
 ): [Point, Point] | null => {
@@ -340,7 +342,7 @@ export const useIsAiming = <T extends HTMLElement = HTMLElement>(
   const {
     tolerance = DEFAULT_TOLERANCE,
     isEnabled = true,
-    handler,
+    onChange,
     idleTimeout = DEFAULT_IDLE_TIMEOUT,
   } = options;
 
@@ -356,11 +358,17 @@ export const useIsAiming = <T extends HTMLElement = HTMLElement>(
   /**
    * Updates aiming state and notifies consumer.
    * @param {boolean} value - The new aiming state.
+   * @param {boolean} forceChange - If true, always call onChange even if value didn't change.
    * @returns {void}
    */
-  const setIsAiming = (value: boolean) => {
-    isAimingRef.current = value;
-    handler?.(value);
+  const setIsAiming = (value: boolean, forceChange = false) => {
+    // Only call onChange if the value actually changed, or if forceChange is true
+    if (isAimingRef.current !== value || forceChange) {
+      isAimingRef.current = value;
+      onChange?.(value);
+    } else {
+      isAimingRef.current = value;
+    }
   };
 
   const getIsAiming = () => isAimingRef.current;
@@ -422,7 +430,7 @@ export const useIsAiming = <T extends HTMLElement = HTMLElement>(
 
   useEffect(() => {
     if (!isEnabled) {
-      setIsAiming(false);
+      setIsAiming(false, true); // Force onChange call when disabling
       lastCursorRef.current = null;
       prevCursorRef.current = null;
       lastRecalcCursorRef.current = null;

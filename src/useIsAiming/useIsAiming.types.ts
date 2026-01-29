@@ -1,7 +1,7 @@
 /**
  * A simple 2D point.
  */
-export type Point = {
+export interface Point {
   /**
    * The x coordinate of the point.
    */
@@ -10,7 +10,7 @@ export type Point = {
    * The y coordinate of the point.
    */
   y: number;
-};
+}
 
 /**
  * Options for the useIsAiming hook.
@@ -30,7 +30,7 @@ export interface UseIsAimingOptions {
   /**
    * A callback that will work when isAiming changes.
    */
-  handler?: (isAiming: boolean) => void;
+  onChange?: (isAiming: boolean) => void;
   /**
    * Timeout in milliseconds after which isAiming is set to false
    * if the cursor remains idle (doesn't move).

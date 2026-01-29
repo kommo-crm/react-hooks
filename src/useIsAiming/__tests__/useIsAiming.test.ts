@@ -4,8 +4,8 @@ import { useIsAiming } from '../useIsAiming';
 describe('useIsAiming', () => {
   beforeAll(() => {
     jest.useFakeTimers();
-    Object.defineProperty(window, 'pageXOffset', { value: 0, writable: true });
-    Object.defineProperty(window, 'pageYOffset', { value: 0, writable: true });
+    Object.defineProperty(window, 'scrollX', { value: 0, writable: true });
+    Object.defineProperty(window, 'scrollY', { value: 0, writable: true });
   });
 
   afterEach(() => {
@@ -108,13 +108,13 @@ describe('useIsAiming', () => {
     });
   });
 
-  describe('handler callback', () => {
-    it('should call handler when isAiming changes from false to true', () => {
-      const handler = jest.fn();
+  describe('onChange callback', () => {
+    it('should call onChange when isAiming changes from false to true', () => {
+      const onChange = jest.fn();
 
       const { result } = renderHook(() =>
         useIsAiming({
-          handler,
+          onChange,
           tolerance: 50,
         })
       );
@@ -136,16 +136,16 @@ describe('useIsAiming', () => {
         simulateMouseMove(100, 160);
       });
 
-      expect(handler).toHaveBeenCalledWith(true);
+      expect(onChange).toHaveBeenCalledWith(true);
     });
 
-    it('should call handler when isAiming changes from true to false', () => {
-      const handler = jest.fn();
+    it('should call onChange when isAiming changes from true to false', () => {
+      const onChange = jest.fn();
 
       const { result } = renderHook(() =>
         useIsAiming({
-          handler,
-          tolerance: 50,
+          onChange,
+          tolerance: 10, // Small tolerance to allow state change
         })
       );
 
@@ -158,6 +158,7 @@ describe('useIsAiming', () => {
       (result.current.ref as React.MutableRefObject<HTMLElement>).current =
         mockElement;
 
+      // Move toward menu to set isAiming to true
       act(() => {
         simulateMouseMove(50, 150);
       });
@@ -166,21 +167,36 @@ describe('useIsAiming', () => {
         simulateMouseMove(100, 160);
       });
 
-      handler.mockClear();
-
+      // Wait for any pending recalculations
       act(() => {
-        simulateMouseMove(50, 155);
+        jest.advanceTimersByTime(0);
       });
 
-      expect(handler).toHaveBeenCalledWith(false);
+      expect(result.current.isAiming()).toBe(true);
+
+      onChange.mockClear();
+
+      // Move away from menu with enough movement to trigger state change
+      act(() => {
+        simulateMouseMove(10, 10); // Move far away from menu
+      });
+
+      // Wait for any pending recalculations
+      act(() => {
+        jest.advanceTimersByTime(0);
+      });
+
+      expect(result.current.isAiming()).toBe(false);
+      expect(onChange).toHaveBeenCalledWith(false);
     });
 
-    it('should not call handler when value does not change', () => {
-      const handler = jest.fn();
+    it('should not call onChange when value does not change', () => {
+      const onChange = jest.fn();
 
       const { result } = renderHook(() =>
         useIsAiming({
-          handler,
+          onChange,
+          tolerance: 50, // Large tolerance to prevent state changes
         })
       );
 
@@ -195,7 +211,7 @@ describe('useIsAiming', () => {
 
       // First move - establishes previous position (far from menu)
       act(() => {
-        simulateMouseMove(10, 10);
+        simulateMouseMove(50, 150);
       });
 
       // Wait for any pending recalculations
@@ -203,12 +219,9 @@ describe('useIsAiming', () => {
         jest.advanceTimersByTime(0);
       });
 
-      // Clear handler calls from initialization
-      handler.mockClear();
-
-      // Second move - small movement away from menu (not toward it)
+      // Second move - move toward menu to establish aiming state
       act(() => {
-        simulateMouseMove(5, 5); // Move further away from menu
+        simulateMouseMove(100, 160); // Move toward menu
       });
 
       // Wait for any pending recalculations
@@ -216,14 +229,31 @@ describe('useIsAiming', () => {
         jest.advanceTimersByTime(0);
       });
 
-      // The important thing is that isAiming state didn't change (still false)
-      expect(result.current.isAiming()).toBe(false);
-      // Handler might be called, but the state should remain the same
-      // We verify that the state is correct rather than counting handler calls
+      // Verify we're in aiming state
+      expect(result.current.isAiming()).toBe(true);
+
+      // Clear onChange calls from initialization and setup moves
+      onChange.mockClear();
+
+      // Third move - small movement that keeps aiming state true
+      // This movement should not trigger onChange because state remains true
+      act(() => {
+        simulateMouseMove(110, 170); // Continue moving toward menu
+      });
+
+      // Wait for any pending recalculations
+      act(() => {
+        jest.advanceTimersByTime(0);
+      });
+
+      // State should remain true
+      expect(result.current.isAiming()).toBe(true);
+      // onChange should not be called because state didn't change (remained true)
+      expect(onChange).not.toHaveBeenCalled();
     });
 
-    it('should reset isAiming and call handler when isEnabled changes to false', () => {
-      const handler = jest.fn();
+    it('should reset isAiming and call onChange when isEnabled changes to false', () => {
+      const onChange = jest.fn();
 
       const { rerender } = renderHook(
         function renderHookFn(props: {
@@ -234,7 +264,7 @@ describe('useIsAiming', () => {
         }) {
           return useIsAiming({
             isEnabled: props.isEnabled,
-            handler,
+            onChange,
           });
         },
         { initialProps: { isEnabled: true } }
@@ -242,17 +272,17 @@ describe('useIsAiming', () => {
 
       rerender({ isEnabled: false });
 
-      expect(handler).toHaveBeenCalledWith(false);
+      expect(onChange).toHaveBeenCalledWith(false);
     });
   });
 
   describe('tolerance behavior', () => {
     it('should allow immediate transition from false to true regardless of tolerance', () => {
-      const handler = jest.fn();
+      const onChange = jest.fn();
 
       const { result } = renderHook(() =>
         useIsAiming({
-          handler,
+          onChange,
           tolerance: 1000, // Very high tolerance
         })
       );
@@ -276,15 +306,15 @@ describe('useIsAiming', () => {
 
       // Should still transition to true immediately
       expect(result.current.isAiming()).toBe(true);
-      expect(handler).toHaveBeenCalledWith(true);
+      expect(onChange).toHaveBeenCalledWith(true);
     });
 
     it('should respect tolerance when transitioning from true to false', () => {
-      const handler = jest.fn();
+      const onChange = jest.fn();
 
       const { result } = renderHook(() =>
         useIsAiming({
-          handler,
+          onChange,
           tolerance: 100,
         })
       );
@@ -314,21 +344,20 @@ describe('useIsAiming', () => {
         jest.advanceTimersByTime(0);
       });
 
-      handler.mockClear();
+      onChange.mockClear();
 
       // Small movement away (less than tolerance)
       // When moving away but accumulated movement is less than tolerance,
       // the function returns early without calling setIsAiming
-      // So handler should not be called
+      // So onChange should not be called
       act(() => {
         simulateMouseMove(101, 161); // ~1.4px movement - less than tolerance
       });
 
       // Should still be true because movement is less than tolerance
       expect(result.current.isAiming()).toBe(true);
-      // The important thing is that isAiming stays true
-      // Handler might be called, but state should remain true
-      // We verify the state rather than counting handler calls
+      // onChange should not be called because state didn't change (remained true)
+      expect(onChange).not.toHaveBeenCalled();
 
       // Large movement away (more than tolerance)
       act(() => {
@@ -337,17 +366,17 @@ describe('useIsAiming', () => {
 
       // Should now be false
       expect(result.current.isAiming()).toBe(false);
-      expect(handler).toHaveBeenCalledWith(false);
+      expect(onChange).toHaveBeenCalledWith(false);
     });
   });
 
   describe('idleTimeout behavior', () => {
     it('should set isAiming to false after idle timeout', () => {
-      const handler = jest.fn();
+      const onChange = jest.fn();
 
       const { result } = renderHook(() =>
         useIsAiming({
-          handler,
+          onChange,
           idleTimeout: 500,
         })
       );
@@ -371,7 +400,7 @@ describe('useIsAiming', () => {
       });
 
       expect(result.current.isAiming()).toBe(true);
-      handler.mockClear();
+      onChange.mockClear();
 
       // Advance time past idle timeout without moving
       act(() => {
@@ -379,15 +408,15 @@ describe('useIsAiming', () => {
       });
 
       expect(result.current.isAiming()).toBe(false);
-      expect(handler).toHaveBeenCalledWith(false);
+      expect(onChange).toHaveBeenCalledWith(false);
     });
 
     it('should reset idle timeout on mouse movement', () => {
-      const handler = jest.fn();
+      const onChange = jest.fn();
 
       const { result } = renderHook(() =>
         useIsAiming({
-          handler,
+          onChange,
           idleTimeout: 500,
         })
       );
@@ -417,7 +446,7 @@ describe('useIsAiming', () => {
         jest.advanceTimersByTime(0);
       });
 
-      handler.mockClear();
+      onChange.mockClear();
 
       // Advance time but not past timeout
       act(() => {
@@ -442,8 +471,8 @@ describe('useIsAiming', () => {
 
       // Should still be true because timeout was reset
       expect(result.current.isAiming()).toBe(true);
-      // The key point is that isAiming should remain true
-      // Handler calls are less important than the actual state
+      // onChange should not be called because state didn't change (remained true)
+      expect(onChange).not.toHaveBeenCalled();
 
       // Now advance past timeout
       act(() => {
@@ -451,15 +480,15 @@ describe('useIsAiming', () => {
       });
 
       expect(result.current.isAiming()).toBe(false);
-      expect(handler).toHaveBeenCalledWith(false);
+      expect(onChange).toHaveBeenCalledWith(false);
     });
 
     it('should use custom idleTimeout value', () => {
-      const handler = jest.fn();
+      const onChange = jest.fn();
 
       const { result } = renderHook(() =>
         useIsAiming({
-          handler,
+          onChange,
           idleTimeout: 1000,
         })
       );
@@ -482,7 +511,7 @@ describe('useIsAiming', () => {
       });
 
       expect(result.current.isAiming()).toBe(true);
-      handler.mockClear();
+      onChange.mockClear();
 
       // Advance time less than custom timeout
       act(() => {
@@ -490,7 +519,7 @@ describe('useIsAiming', () => {
       });
 
       expect(result.current.isAiming()).toBe(true);
-      expect(handler).not.toHaveBeenCalled();
+      expect(onChange).not.toHaveBeenCalled();
 
       // Advance past custom timeout
       act(() => {
@@ -498,17 +527,17 @@ describe('useIsAiming', () => {
       });
 
       expect(result.current.isAiming()).toBe(false);
-      expect(handler).toHaveBeenCalledWith(false);
+      expect(onChange).toHaveBeenCalledWith(false);
     });
   });
 
   describe('cursor inside element', () => {
     it('should set isAiming to false when cursor is inside element', () => {
-      const handler = jest.fn();
+      const onChange = jest.fn();
 
       const { result } = renderHook(() =>
         useIsAiming({
-          handler,
+          onChange,
         })
       );
 
@@ -531,7 +560,7 @@ describe('useIsAiming', () => {
       });
 
       expect(result.current.isAiming()).toBe(true);
-      handler.mockClear();
+      onChange.mockClear();
 
       // Move cursor inside element
       act(() => {
@@ -539,15 +568,15 @@ describe('useIsAiming', () => {
       });
 
       expect(result.current.isAiming()).toBe(false);
-      expect(handler).toHaveBeenCalledWith(false);
+      expect(onChange).toHaveBeenCalledWith(false);
     });
 
     it('should keep isAiming false when cursor moves inside element', () => {
-      const handler = jest.fn();
+      const onChange = jest.fn();
 
       const { result } = renderHook(() =>
         useIsAiming({
-          handler,
+          onChange,
         })
       );
 
@@ -570,8 +599,8 @@ describe('useIsAiming', () => {
         jest.advanceTimersByTime(0);
       });
 
-      // Clear handler calls from initialization
-      handler.mockClear();
+      // Clear onChange calls from initialization
+      onChange.mockClear();
 
       // Move slightly inside element - should not change aiming state (still false)
       act(() => {
@@ -584,9 +613,8 @@ describe('useIsAiming', () => {
       });
 
       expect(result.current.isAiming()).toBe(false);
-      // The important thing is that isAiming stays false
-      // Handler might be called with false, but that's acceptable since state is false
-      // We verify the state rather than counting handler calls
+      // onChange should not be called because state didn't change (remained false)
+      expect(onChange).not.toHaveBeenCalled();
     });
   });
 
@@ -718,12 +746,12 @@ describe('useIsAiming', () => {
     });
 
     it('should update aiming state when cursor changes direction', () => {
-      const handler = jest.fn();
+      const onChange = jest.fn();
 
       const { result } = renderHook(() =>
         useIsAiming({
-          handler,
-          tolerance: 50,
+          onChange,
+          tolerance: 10, // Small tolerance to allow state change
         })
       );
 
@@ -745,16 +773,26 @@ describe('useIsAiming', () => {
         simulateMouseMove(100, 160);
       });
 
-      expect(result.current.isAiming()).toBe(true);
-      handler.mockClear();
-
-      // Move away from menu
+      // Wait for any pending recalculations
       act(() => {
-        simulateMouseMove(50, 155);
+        jest.advanceTimersByTime(0);
+      });
+
+      expect(result.current.isAiming()).toBe(true);
+      onChange.mockClear();
+
+      // Move away from menu with enough movement to trigger state change
+      act(() => {
+        simulateMouseMove(10, 10); // Move far away from menu
+      });
+
+      // Wait for any pending recalculations
+      act(() => {
+        jest.advanceTimersByTime(0);
       });
 
       expect(result.current.isAiming()).toBe(false);
-      expect(handler).toHaveBeenCalledWith(false);
+      expect(onChange).toHaveBeenCalledWith(false);
     });
   });
 });

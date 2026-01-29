@@ -29,7 +29,7 @@ const Demo: React.FC = () => {
   const { ref } = useIsAiming<HTMLDivElement>({
     tolerance: 20,
     idleTimeout: 500,
-    handler: setIsAimingValue,
+    onChange: setIsAimingValue,
   });
 
   const handleItemHover = useCallback(
@@ -87,7 +87,7 @@ const { ref, isAiming } = useIsAiming(options);
 
 - **`tolerance`**_`: number`_ - pixel tolerance for movement detection. When `isAiming` is `true`, the state will only update if accumulated cursor movement exceeds this threshold. Transitions from `false` to `true` are immediate and not affected by tolerance (default: `20`);
 - **`isEnabled`**_`: boolean`_ - enables or disables the menu aim logic. When disabled, the hook becomes a no-op (default: `true`);
-- **`handler`**_`: (isAiming: boolean) => void`_ - optional callback that is called when the aiming state changes;
+- **`onChange`**_`: (isAiming: boolean) => void`_ - optional callback that is called when the aiming state changes;
 - **`idleTimeout`**_`: number`_ - timeout in milliseconds after which `isAiming` is set to `false` if the cursor remains idle (doesn't move) (default: `500`);
 
 ### Return Value
