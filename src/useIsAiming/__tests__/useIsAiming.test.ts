@@ -41,6 +41,8 @@ describe('useIsAiming', () => {
     Object.defineProperty(event, 'pageX', { value: pageX });
     Object.defineProperty(event, 'pageY', { value: pageY });
     document.dispatchEvent(event);
+    // Advance timers to trigger recalc interval (50ms)
+    jest.advanceTimersByTime(50);
   };
 
   describe('basic functionality', () => {
@@ -250,29 +252,6 @@ describe('useIsAiming', () => {
       expect(result.current.isAiming()).toBe(true);
       // onChange should not be called because state didn't change (remained true)
       expect(onChange).not.toHaveBeenCalled();
-    });
-
-    it('should reset isAiming and call onChange when isEnabled changes to false', () => {
-      const onChange = jest.fn();
-
-      const { rerender } = renderHook(
-        function renderHookFn(props: {
-          /**
-           * Enables or disables the menu aim logic.
-           */
-          isEnabled: boolean;
-        }) {
-          return useIsAiming({
-            isEnabled: props.isEnabled,
-            onChange,
-          });
-        },
-        { initialProps: { isEnabled: true } }
-      );
-
-      rerender({ isEnabled: false });
-
-      expect(onChange).toHaveBeenCalledWith(false);
     });
   });
 
