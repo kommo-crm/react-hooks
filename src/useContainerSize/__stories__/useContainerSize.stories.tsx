@@ -1,6 +1,6 @@
-import { Meta, StoryFn } from '@storybook/react';
-import React, { useMemo, useState } from 'react';
-import { useContainerSize } from '../useContainerSize';
+import { Meta, StoryFn } from '@storybook/react'
+import React, { useMemo, useState } from 'react'
+import { useContainerSize } from '../useContainerSize'
 
 export default {
   title: 'Hooks/useContainerSize',
@@ -10,22 +10,36 @@ const Template: StoryFn = () => {
   const [containerWidth, setContainerWidth] = useState(320);
   const [throttleTime, setThrottleTime] = useState(100);
   const [isEnabled, setIsEnabled] = useState(true);
+  const [useBreakpoints, setUseBreakpoints] = useState(true);
+  const [useCustomCalcWidth, setUseCustomCalcWidth] = useState(false);
+  const [customOffset, setCustomOffset] = useState(0);
   const [mobileBreakpoint, setMobileBreakpoint] = useState(0);
   const [tabletBreakpoint, setTabletBreakpoint] = useState(768);
   const [desktopBreakpoint, setDesktopBreakpoint] = useState(1200);
 
   const breakpoints = useMemo(() => {
+    if (!useBreakpoints) {
+      return null;
+    }
     return {
       mobile: mobileBreakpoint,
       tablet: tabletBreakpoint,
       desktop: desktopBreakpoint,
     };
-  }, [mobileBreakpoint, tabletBreakpoint, desktopBreakpoint]);
+  }, [useBreakpoints, mobileBreakpoint, tabletBreakpoint, desktopBreakpoint]);
+
+  const calcWidth = useMemo(() => {
+    if (!useCustomCalcWidth) {
+      return undefined;
+    }
+    return (element: HTMLElement) => element.offsetWidth + customOffset;
+  }, [useCustomCalcWidth, customOffset]);
 
   const { ref, size, width } = useContainerSize({
     breakpoints,
     throttleTime,
     isEnabled,
+    calcWidth,
   });
 
   const handleInputContainerWidthChange = (
@@ -62,6 +76,24 @@ const Template: StoryFn = () => {
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     setDesktopBreakpoint(Number(event.target.value));
+  };
+
+  const handleUseBreakpointsChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setUseBreakpoints(event.target.checked);
+  };
+
+  const handleUseCustomCalcWidthChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setUseCustomCalcWidth(event.target.checked);
+  };
+
+  const handleCustomOffsetChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setCustomOffset(Number(event.target.value));
   };
 
   return (
@@ -101,6 +133,70 @@ const Template: StoryFn = () => {
         <span>Enabled (isEnabled: {isEnabled ? 'true' : 'false'})</span>
       </label>
 
+      <label style={{ display: 'block', marginBottom: 12 }}>
+        <input
+          type="checkbox"
+          checked={useBreakpoints}
+          onChange={handleUseBreakpointsChange}
+          style={{ marginRight: 8 }}
+        />
+        <span>
+          Use breakpoints (breakpoints: {useBreakpoints ? 'object' : 'null'})
+        </span>
+      </label>
+
+      <label style={{ display: 'block', marginBottom: 12 }}>
+        <input
+          type="checkbox"
+          checked={useCustomCalcWidth}
+          onChange={handleUseCustomCalcWidthChange}
+          style={{ marginRight: 8 }}
+        />
+        <span>Use custom calcWidth function</span>
+      </label>
+
+      {useCustomCalcWidth && (
+        <div
+          style={{
+            marginBottom: 12,
+            marginLeft: 20,
+            padding: 12,
+            border: '1px solid #ddd',
+            borderRadius: 4,
+            backgroundColor: '#f9f9f9',
+          }}
+        >
+          <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', fontSize: 14 }}>
+            Custom function code:
+          </p>
+          <pre
+            style={{
+              margin: 0,
+              padding: 8,
+              backgroundColor: '#fff',
+              border: '1px solid #ccc',
+              borderRadius: 4,
+              fontSize: 12,
+              overflow: 'auto',
+            }}
+          >
+            {`calcWidth: (element) => element.offsetWidth + ${customOffset}`}
+          </pre>
+          <label style={{ display: 'block', marginTop: 12, marginBottom: 0 }}>
+            <span style={{ marginRight: 8 }}>Custom offset:</span>
+            <input
+              type="number"
+              value={customOffset}
+              onChange={handleCustomOffsetChange}
+              style={{ width: 100, padding: '4px 8px' }}
+            />
+            <span style={{ marginLeft: 8, fontSize: 12, color: '#666' }}>
+              px
+            </span>
+          </label>
+        </div>
+      )}
+
       <div
         style={{
           marginBottom: 12,
@@ -108,6 +204,7 @@ const Template: StoryFn = () => {
           border: '1px solid #ddd',
           borderRadius: 4,
           backgroundColor: '#f9f9f9',
+          opacity: useBreakpoints ? 1 : 0.5,
         }}
       >
         <p style={{ margin: '0 0 8px 0', fontWeight: 'bold' }}>
@@ -118,8 +215,9 @@ const Template: StoryFn = () => {
           <input
             type="number"
             min={0}
-            value={breakpoints.mobile}
+            value={mobileBreakpoint}
             onChange={handleMobileBreakpointChange}
+            disabled={!useBreakpoints}
             style={{ marginLeft: 17, width: 80 }}
           />
           <span style={{ marginLeft: 8, fontSize: 12, color: '#666' }}>px</span>
@@ -129,8 +227,9 @@ const Template: StoryFn = () => {
           <input
             type="number"
             min={0}
-            value={breakpoints.tablet}
+            value={tabletBreakpoint}
             onChange={handleTabletBreakpointChange}
+            disabled={!useBreakpoints}
             style={{ marginLeft: 23, width: 80 }}
           />
           <span style={{ marginLeft: 8, fontSize: 12, color: '#666' }}>px</span>
@@ -140,8 +239,9 @@ const Template: StoryFn = () => {
           <input
             type="number"
             min={0}
-            value={breakpoints.desktop}
+            value={desktopBreakpoint}
             onChange={handleDesktopBreakpointChange}
+            disabled={!useBreakpoints}
             style={{ marginLeft: 8, width: 80 }}
           />
           <span style={{ marginLeft: 8, fontSize: 12, color: '#666' }}>px</span>
@@ -169,8 +269,18 @@ const Template: StoryFn = () => {
           Throttle time: {throttleTime}ms
         </p>
         <p style={{ marginTop: 8, color: '#666', fontSize: 14 }}>
-          Current breakpoints: mobile={breakpoints.mobile}px, tablet=
-          {breakpoints.tablet}px, desktop={breakpoints.desktop}px
+          Current breakpoints:{' '}
+          {breakpoints
+            ? `mobile=${breakpoints.mobile}px, tablet=${breakpoints.tablet}px, desktop=${breakpoints.desktop}px`
+            : 'null (only width is returned)'}
+        </p>
+        <p style={{ marginTop: 8, color: '#666', fontSize: 14 }}>
+          Width calculation:{' '}
+          <strong>
+            {useCustomCalcWidth
+              ? `offsetWidth + ${customOffset} (custom)`
+              : 'offsetWidth (default)'}
+          </strong>
         </p>
         <p style={{ marginTop: 8, color: '#666', fontSize: 14 }}>
           Hook enabled: <strong>{isEnabled ? 'Yes' : 'No'}</strong>

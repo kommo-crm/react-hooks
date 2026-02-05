@@ -3,12 +3,22 @@ import { throttle } from 'throttle-debounce';
 
 export type Breakpoints = Record<string, number>;
 
+/**
+ * Type helper that returns the breakpoint key type or null.
+ * If T extends Breakpoints, returns keyof T | null.
+ * Otherwise, returns null.
+ */
+type BreakpointSize<T extends Breakpoints | null> =
+  | (T extends Breakpoints ? keyof T : null)
+  | null;
+
 export interface UseContainerSizeOptions<T> {
   /**
    * Breakpoints map where key is a breakpoint name
    * and value is a minimum container width in pixels.
+   * If null, only width will be returned (size will always be null).
    */
-  breakpoints: T;
+  breakpoints: T | null;
   /**
    * Flag that enables or disables hook logic.
    * When disabled the hook does not listen to size changes.
@@ -18,13 +28,29 @@ export interface UseContainerSizeOptions<T> {
    * Throttle time in milliseconds for resize events.
    */
   throttleTime?: number;
+  /**
+   * Custom function to measure container width.
+   * If not provided, defaults to element.offsetWidth for backward compatibility.
+   * The function receives the element and should return width in pixels.
+   * The function should return a non-negative number.
+   * @example
+   * // Custom function that calculates width with padding
+   * calcWidth: (element) => element.offsetWidth - 20
+   * @example
+   * // Custom function using getBoundingClientRect
+   * calcWidth: (element) => element.getBoundingClientRect().width
+   * @example
+   * // Custom function using scrollWidth
+   * calcWidth: (element) => element.scrollWidth
+   */
+  calcWidth?: (element: HTMLElement) => number;
 }
 
-export interface UseContainerSizeResult<T extends Breakpoints> {
+export interface UseContainerSizeResult<T extends Breakpoints | null> {
   /**
-   * Current breakpoint name or null if no breakpoint matches.
+   * Current breakpoint name or null if no breakpoint matches or breakpoints is null.
    */
-  size: keyof T | null;
+  size: BreakpointSize<T>;
   /**
    * Current container width in pixels.
    */
@@ -71,12 +97,12 @@ const getCurrentSize = <T extends Breakpoints>(
   return null;
 };
 
-type ContainerState<T extends Breakpoints> = {
+type ContainerState<T extends Breakpoints | null> = {
   /**
    * Current breakpoint name that matches the container width,
-   * or null if no breakpoint matches.
+   * or null if no breakpoint matches or breakpoints is null.
    */
-  size: keyof T | null;
+  size: BreakpointSize<T>;
   /**
    * Current container width in pixels, or null if element is not attached.
    */
@@ -87,18 +113,26 @@ type ContainerState<T extends Breakpoints> = {
  * React hook that tracks container width and returns a breakpoint name
  * based on the provided breakpoints map.
  * The hook uses ResizeObserver under the hood and throttles resize events.
- * @template T - Type extending Breakpoints.
+ * @template T - Type extending Breakpoints or null.
  * @param {UseContainerSizeOptions<T>} options - Configuration options for the hook.
  * @returns {UseContainerSizeResult<T>} Object containing ref callback, current size, and width.
  */
-export const useContainerSize = <T extends Breakpoints>(
+export const useContainerSize = <T extends Breakpoints | null>(
   options: UseContainerSizeOptions<T>
 ): UseContainerSizeResult<T> => {
-  const { breakpoints, isEnabled = true, throttleTime = 10 } = options;
+  const {
+    breakpoints,
+    isEnabled = true,
+    throttleTime = 10,
+    calcWidth,
+  } = options;
 
   const elementRef = useRef<HTMLElement | null>(null);
 
   const parsedBreakpoints = useMemo(() => {
+    if (!breakpoints) {
+      return [];
+    }
     return (
       /**
        * Sort by value in ascending order to ensure correct breakpoint matching.
@@ -134,8 +168,12 @@ export const useContainerSize = <T extends Breakpoints>(
       return;
     }
 
-    const newWidth = element.offsetWidth;
-    const newSize = getCurrentSize<T>(newWidth, parsedBreakpoints);
+    const newWidth = calcWidth ? calcWidth(element) : element.offsetWidth;
+
+    const newSize: BreakpointSize<T> =
+      breakpoints && parsedBreakpoints.length > 0
+        ? (getCurrentSize(newWidth, parsedBreakpoints) as BreakpointSize<T>)
+        : null;
 
     setState((prev) => {
       const sameWidth = prev.width === newWidth;
@@ -150,7 +188,7 @@ export const useContainerSize = <T extends Breakpoints>(
         size: newSize,
       };
     });
-  }, [parsedBreakpoints]);
+  }, [parsedBreakpoints, calcWidth, breakpoints]);
 
   useLayoutEffect(() => {
     const element = elementRef.current;

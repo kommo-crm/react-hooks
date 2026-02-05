@@ -8,9 +8,10 @@ React hook that tracks the width of a container element and returns the name of 
 
 ### Options
 
-- `breakpoints` (required): A map where keys are breakpoint names and values are minimum container widths in pixels.
+- `breakpoints` (required): A map where keys are breakpoint names and values are minimum container widths in pixels. Can be `null` to return only width without breakpoint matching.
 - `isEnabled` (optional, default: `true`): Flag that enables or disables hook logic.
 - `throttleTime` (optional, default: `10`): Throttle time in milliseconds for resize events.
+- `calcWidth` (optional): Custom function to measure container width. If not provided, defaults to `element.offsetWidth`. The function receives the element and should return width in pixels.
 
 Usage
 
@@ -43,11 +44,47 @@ const Demo: React.FC = () => {
 };
 ```
 
-### Demo
+### Examples
+
+#### Basic usage with breakpoints
 
 ```tsx
 const { ref, size, width } = useContainerSize({
   breakpoints,
   throttleTime: 50,
 });
+```
+
+#### Using custom width calculation
+
+```tsx
+// Using getBoundingClientRect for more accurate width
+const { ref, size, width } = useContainerSize({
+  breakpoints,
+  calcWidth: (element) => element.getBoundingClientRect().width,
+});
+
+// Custom calculation with offset
+const { ref, size, width } = useContainerSize({
+  breakpoints,
+  calcWidth: (element) => element.offsetWidth - 20, // Subtract padding
+});
+
+// Using scrollWidth
+const { ref, size, width } = useContainerSize({
+  breakpoints,
+  calcWidth: (element) => element.scrollWidth,
+});
+```
+
+#### Using without breakpoints (only width)
+
+```tsx
+// When breakpoints is null, only width is returned (size is always null)
+const { ref, size, width } = useContainerSize({
+  breakpoints: null,
+  calcWidth: (element) => element.getBoundingClientRect().width,
+});
+
+// size will always be null, width will contain the measured width
 ```
