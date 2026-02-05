@@ -216,17 +216,26 @@ describe('useContainerSize', () => {
       })
     );
 
+    const element = createElement(500);
+
     await act(async () => {
-      const element = createElement(500);
       result.current.ref(element);
       await waitForNextUpdate();
     });
 
     expect(result.current.size).toBe('md');
     expect(result.current.width).toBe(500);
+
+    /**
+     * Verify that changes are not tracked when isEnabled is false
+     */
+    updateElementWidth(element, 300);
+
+    expect(result.current.size).toBe('md');
+    expect(result.current.width).toBe(500);
   });
 
-  it('should use custom throttleTime when provided', async () => {
+  it('should throttle resize events with custom throttleTime', async () => {
     const breakpoints = {
       sm: 0,
       md: 400,
@@ -236,36 +245,43 @@ describe('useContainerSize', () => {
     const { result, waitForNextUpdate } = renderHook(() =>
       useContainerSize({
         breakpoints,
-        throttleTime: 50,
+        throttleTime: 1000,
       })
     );
 
+    const element = createElement(500);
+
     await act(async () => {
-      const element = createElement(500);
       result.current.ref(element);
       await waitForNextUpdate();
     });
 
     expect(result.current.size).toBe('md');
-  });
+    expect(result.current.width).toBe(500);
 
-  it('should use default throttleTime when not provided', async () => {
-    const breakpoints = {
-      sm: 0,
-      md: 400,
-    } as const;
+    updateElementWidth(element, 900);
 
-    const { result, waitForNextUpdate } = renderHook(() =>
-      useContainerSize({ breakpoints })
-    );
-
+    /**
+     * After 100ms, throttle should not have processed the event yet
+     * (throttleTime is 1000ms, so we're still within the throttle window)
+     */
     await act(async () => {
-      const element = createElement(500);
-      result.current.ref(element);
-      await waitForNextUpdate();
+      await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
     expect(result.current.size).toBe('md');
+    expect(result.current.width).toBe(500);
+
+    /**
+     * After 1100ms, throttle should have processed the event
+     * (throttleTime is 1000ms, so we've passed the throttle window)
+     */
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    });
+
+    expect(result.current.size).toBe('lg');
+    expect(result.current.width).toBe(900);
   });
 
   it('should update size when element width changes and isEnabled is true', async () => {

@@ -30,7 +30,7 @@ export interface UseContainerSizeOptions<T> {
   throttleTime?: number;
   /**
    * Custom function to measure container width.
-   * If not provided, defaults to element.offsetWidth for backward compatibility.
+   * If not provided, defaults to element.offsetWidth.
    * The function receives the element and should return width in pixels.
    * The function should return a non-negative number.
    * @example
