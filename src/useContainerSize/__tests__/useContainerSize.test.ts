@@ -1,5 +1,5 @@
-import { act, renderHook } from '@testing-library/react-hooks'
-import { Breakpoints, useContainerSize } from '../useContainerSize'
+import { act, renderHook } from '@testing-library/react-hooks';
+import { Breakpoints, useContainerSize } from '../useContainerSize';
 
 describe('useContainerSize', () => {
   /**

@@ -1,6 +1,6 @@
-import { Meta, StoryFn } from '@storybook/react'
-import React, { useMemo, useState } from 'react'
-import { useContainerSize } from '../useContainerSize'
+import { Meta, StoryFn } from '@storybook/react';
+import React, { useMemo, useState } from 'react';
+import { useContainerSize } from '../useContainerSize';
 
 export default {
   title: 'Hooks/useContainerSize',
