@@ -12,10 +12,6 @@ describe('useIsAiming', () => {
     jest.clearAllTimers();
   });
 
-  afterAll(() => {
-    jest.useRealTimers();
-  });
-
   const createMockElement = (rect: Partial<DOMRect>) => {
     return {
       getBoundingClientRect: () => ({
@@ -42,11 +38,12 @@ describe('useIsAiming', () => {
     Object.defineProperty(event, 'pageY', { value: pageY });
     document.dispatchEvent(event);
     /**
-     * Without this, the tests fail because requestAnimationFrame is not executed
-     * automatically in Jest with fake timers. Therefore, we need to explicitly
-     * advance the timers in order to perform pending callbacks.
+     * requestAnimationFrame in Jest fake timers is implemented via setTimeout
+     * with ~16ms delay. Therefore, instead of advanceTimersToNextFrame,
+     * advanceTimersByTime can be used.
+     * @see https://jestjs.io/docs/timer-mocks#advance-timers-to-the-next-frame
      */
-    jest.advanceTimersByTime(50);
+    jest.advanceTimersByTime(16);
   };
 
   describe('basic functionality', () => {
@@ -173,11 +170,6 @@ describe('useIsAiming', () => {
         simulateMouseMove(100, 160);
       });
 
-      // Wait for any pending recalculations
-      act(() => {
-        jest.advanceTimersByTime(0);
-      });
-
       expect(result.current.isAiming()).toBe(true);
 
       onChange.mockClear();
@@ -185,11 +177,6 @@ describe('useIsAiming', () => {
       // Move away from menu with enough movement to trigger state change
       act(() => {
         simulateMouseMove(10, 10); // Move far away from menu
-      });
-
-      // Wait for any pending recalculations
-      act(() => {
-        jest.advanceTimersByTime(0);
       });
 
       expect(result.current.isAiming()).toBe(false);
@@ -220,19 +207,9 @@ describe('useIsAiming', () => {
         simulateMouseMove(50, 150);
       });
 
-      // Wait for any pending recalculations
-      act(() => {
-        jest.advanceTimersByTime(0);
-      });
-
       // Second move - move toward menu to establish aiming state
       act(() => {
         simulateMouseMove(100, 160); // Move toward menu
-      });
-
-      // Wait for any pending recalculations
-      act(() => {
-        jest.advanceTimersByTime(0);
       });
 
       // Verify we're in aiming state
@@ -245,11 +222,6 @@ describe('useIsAiming', () => {
       // This movement should not trigger onChange because state remains true
       act(() => {
         simulateMouseMove(110, 170); // Continue moving toward menu
-      });
-
-      // Wait for any pending recalculations
-      act(() => {
-        jest.advanceTimersByTime(0);
       });
 
       // State should remain true
@@ -321,11 +293,6 @@ describe('useIsAiming', () => {
       });
 
       expect(result.current.isAiming()).toBe(true);
-
-      // Wait for any pending recalculations
-      act(() => {
-        jest.advanceTimersByTime(0);
-      });
 
       onChange.mockClear();
 
@@ -424,11 +391,6 @@ describe('useIsAiming', () => {
 
       expect(result.current.isAiming()).toBe(true);
 
-      // Wait for any pending recalculations
-      act(() => {
-        jest.advanceTimersByTime(0);
-      });
-
       onChange.mockClear();
 
       // Advance time but not past timeout
@@ -440,11 +402,6 @@ describe('useIsAiming', () => {
       // Use a movement that continues aiming toward menu
       act(() => {
         simulateMouseMove(110, 170);
-      });
-
-      // Wait for any pending recalculations
-      act(() => {
-        jest.advanceTimersByTime(0);
       });
 
       // Advance time again (but not past timeout)
@@ -577,22 +534,12 @@ describe('useIsAiming', () => {
         simulateMouseMove(250, 200);
       });
 
-      // Wait for any pending recalculations
-      act(() => {
-        jest.advanceTimersByTime(0);
-      });
-
       // Clear onChange calls from initialization
       onChange.mockClear();
 
       // Move slightly inside element - should not change aiming state (still false)
       act(() => {
         simulateMouseMove(251, 201);
-      });
-
-      // Wait for any pending recalculations
-      act(() => {
-        jest.advanceTimersByTime(0);
       });
 
       expect(result.current.isAiming()).toBe(false);
@@ -756,22 +703,12 @@ describe('useIsAiming', () => {
         simulateMouseMove(100, 160);
       });
 
-      // Wait for any pending recalculations
-      act(() => {
-        jest.advanceTimersByTime(0);
-      });
-
       expect(result.current.isAiming()).toBe(true);
       onChange.mockClear();
 
       // Move away from menu with enough movement to trigger state change
       act(() => {
         simulateMouseMove(10, 10); // Move far away from menu
-      });
-
-      // Wait for any pending recalculations
-      act(() => {
-        jest.advanceTimersByTime(0);
       });
 
       expect(result.current.isAiming()).toBe(false);
