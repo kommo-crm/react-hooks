@@ -41,7 +41,11 @@ describe('useIsAiming', () => {
     Object.defineProperty(event, 'pageX', { value: pageX });
     Object.defineProperty(event, 'pageY', { value: pageY });
     document.dispatchEvent(event);
-    // Advance timers to trigger recalc interval (50ms)
+    /**
+     * Without this, the tests fail because requestAnimationFrame is not executed
+     * automatically in Jest with fake timers. Therefore, we need to explicitly
+     * advance the timers in order to perform pending callbacks.
+     */
     jest.advanceTimersByTime(50);
   };
 
