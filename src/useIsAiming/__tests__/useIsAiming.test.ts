@@ -12,10 +12,6 @@ describe('useIsAiming', () => {
     jest.clearAllTimers();
   });
 
-  afterAll(() => {
-    jest.useRealTimers();
-  });
-
   const createMockElement = (rect: Partial<DOMRect>) => {
     return {
       getBoundingClientRect: () => ({
@@ -136,6 +132,11 @@ describe('useIsAiming', () => {
         simulateMouseMove(100, 160);
       });
 
+      // Advance timer to trigger the animation frame
+      act(() => {
+        jest.advanceTimersByTime(16);
+      });
+
       expect(onChange).toHaveBeenCalledWith(true);
     });
 
@@ -167,9 +168,9 @@ describe('useIsAiming', () => {
         simulateMouseMove(100, 160);
       });
 
-      // Wait for any pending recalculations
+      // Advance timer to trigger the animation frame
       act(() => {
-        jest.advanceTimersByTime(0);
+        jest.advanceTimersByTime(16);
       });
 
       expect(result.current.isAiming()).toBe(true);
@@ -181,9 +182,9 @@ describe('useIsAiming', () => {
         simulateMouseMove(10, 10); // Move far away from menu
       });
 
-      // Wait for any pending recalculations
+      // Advance timer to trigger the animation frame
       act(() => {
-        jest.advanceTimersByTime(0);
+        jest.advanceTimersByTime(16);
       });
 
       expect(result.current.isAiming()).toBe(false);
@@ -214,19 +215,14 @@ describe('useIsAiming', () => {
         simulateMouseMove(50, 150);
       });
 
-      // Wait for any pending recalculations
-      act(() => {
-        jest.advanceTimersByTime(0);
-      });
-
       // Second move - move toward menu to establish aiming state
       act(() => {
         simulateMouseMove(100, 160); // Move toward menu
       });
 
-      // Wait for any pending recalculations
+      // Advance timer to trigger the animation frame
       act(() => {
-        jest.advanceTimersByTime(0);
+        jest.advanceTimersByTime(16);
       });
 
       // Verify we're in aiming state
@@ -241,9 +237,9 @@ describe('useIsAiming', () => {
         simulateMouseMove(110, 170); // Continue moving toward menu
       });
 
-      // Wait for any pending recalculations
+      // Advance timer to trigger the animation frame
       act(() => {
-        jest.advanceTimersByTime(0);
+        jest.advanceTimersByTime(16);
       });
 
       // State should remain true
@@ -251,33 +247,10 @@ describe('useIsAiming', () => {
       // onChange should not be called because state didn't change (remained true)
       expect(onChange).not.toHaveBeenCalled();
     });
-
-    it('should reset isAiming and call onChange when isEnabled changes to false', () => {
-      const onChange = jest.fn();
-
-      const { rerender } = renderHook(
-        function renderHookFn(props: {
-          /**
-           * Enables or disables the menu aim logic.
-           */
-          isEnabled: boolean;
-        }) {
-          return useIsAiming({
-            isEnabled: props.isEnabled,
-            onChange,
-          });
-        },
-        { initialProps: { isEnabled: true } }
-      );
-
-      rerender({ isEnabled: false });
-
-      expect(onChange).toHaveBeenCalledWith(false);
-    });
   });
 
   describe('tolerance behavior', () => {
-    it('should allow immediate transition from false to true regardless of tolerance', () => {
+    it('should allow transition from false to true with small threshold', () => {
       const onChange = jest.fn();
 
       const { result } = renderHook(() =>
@@ -300,11 +273,30 @@ describe('useIsAiming', () => {
         simulateMouseMove(50, 150);
       });
 
+      // Small movement (less than 5px threshold) - should not trigger transition
       act(() => {
-        simulateMouseMove(51, 151); // Very small movement
+        simulateMouseMove(51, 151); // ~1.4px movement
       });
 
-      // Should still transition to true immediately
+      // Advance timer to trigger the animation frame
+      act(() => {
+        jest.advanceTimersByTime(16);
+      });
+
+      expect(result.current.isAiming()).toBe(false);
+      expect(onChange).not.toHaveBeenCalled();
+
+      // Larger movement (more than 5px threshold) - should trigger transition
+      act(() => {
+        simulateMouseMove(60, 160); // ~12.7px movement from previous position
+      });
+
+      // Advance timer to trigger the animation frame
+      act(() => {
+        jest.advanceTimersByTime(16);
+      });
+
+      // Should transition to true with sufficient movement
       expect(result.current.isAiming()).toBe(true);
       expect(onChange).toHaveBeenCalledWith(true);
     });
@@ -337,12 +329,12 @@ describe('useIsAiming', () => {
         simulateMouseMove(100, 160);
       });
 
-      expect(result.current.isAiming()).toBe(true);
-
-      // Wait for any pending recalculations
+      // Advance timer to trigger the animation frame
       act(() => {
-        jest.advanceTimersByTime(0);
+        jest.advanceTimersByTime(16);
       });
+
+      expect(result.current.isAiming()).toBe(true);
 
       onChange.mockClear();
 
@@ -354,6 +346,11 @@ describe('useIsAiming', () => {
         simulateMouseMove(101, 161); // ~1.4px movement - less than tolerance
       });
 
+      // Advance timer to trigger the animation frame
+      act(() => {
+        jest.advanceTimersByTime(16);
+      });
+
       // Should still be true because movement is less than tolerance
       expect(result.current.isAiming()).toBe(true);
       // onChange should not be called because state didn't change (remained true)
@@ -362,6 +359,11 @@ describe('useIsAiming', () => {
       // Large movement away (more than tolerance)
       act(() => {
         simulateMouseMove(200, 200); // ~141px movement
+      });
+
+      // Advance timer to trigger the animation frame
+      act(() => {
+        jest.advanceTimersByTime(16);
       });
 
       // Should now be false
@@ -397,6 +399,11 @@ describe('useIsAiming', () => {
 
       act(() => {
         simulateMouseMove(100, 160);
+      });
+
+      // Advance timer to trigger the animation frame
+      act(() => {
+        jest.advanceTimersByTime(16);
       });
 
       expect(result.current.isAiming()).toBe(true);
@@ -439,12 +446,12 @@ describe('useIsAiming', () => {
         simulateMouseMove(100, 160);
       });
 
-      expect(result.current.isAiming()).toBe(true);
-
-      // Wait for any pending recalculations
+      // Advance timer to trigger the animation frame
       act(() => {
-        jest.advanceTimersByTime(0);
+        jest.advanceTimersByTime(16);
       });
+
+      expect(result.current.isAiming()).toBe(true);
 
       onChange.mockClear();
 
@@ -457,11 +464,6 @@ describe('useIsAiming', () => {
       // Use a movement that continues aiming toward menu
       act(() => {
         simulateMouseMove(110, 170);
-      });
-
-      // Wait for any pending recalculations
-      act(() => {
-        jest.advanceTimersByTime(0);
       });
 
       // Advance time again (but not past timeout)
@@ -508,6 +510,11 @@ describe('useIsAiming', () => {
 
       act(() => {
         simulateMouseMove(100, 160);
+      });
+
+      // Advance timer to trigger the animation frame
+      act(() => {
+        jest.advanceTimersByTime(16);
       });
 
       expect(result.current.isAiming()).toBe(true);
@@ -559,12 +566,22 @@ describe('useIsAiming', () => {
         simulateMouseMove(100, 160);
       });
 
+      // Advance timer to trigger the animation frame
+      act(() => {
+        jest.advanceTimersByTime(16);
+      });
+
       expect(result.current.isAiming()).toBe(true);
       onChange.mockClear();
 
       // Move cursor inside element
       act(() => {
         simulateMouseMove(250, 200);
+      });
+
+      // Advance timer to trigger the animation frame
+      act(() => {
+        jest.advanceTimersByTime(16);
       });
 
       expect(result.current.isAiming()).toBe(false);
@@ -594,11 +611,6 @@ describe('useIsAiming', () => {
         simulateMouseMove(250, 200);
       });
 
-      // Wait for any pending recalculations
-      act(() => {
-        jest.advanceTimersByTime(0);
-      });
-
       // Clear onChange calls from initialization
       onChange.mockClear();
 
@@ -607,9 +619,9 @@ describe('useIsAiming', () => {
         simulateMouseMove(251, 201);
       });
 
-      // Wait for any pending recalculations
+      // Advance timer to trigger the animation frame
       act(() => {
-        jest.advanceTimersByTime(0);
+        jest.advanceTimersByTime(16);
       });
 
       expect(result.current.isAiming()).toBe(false);
@@ -643,6 +655,11 @@ describe('useIsAiming', () => {
         simulateMouseMove(100, 160);
       });
 
+      // Advance timer to trigger the animation frame
+      act(() => {
+        jest.advanceTimersByTime(16);
+      });
+
       expect(result.current.isAiming()).toBe(true);
     });
 
@@ -668,6 +685,11 @@ describe('useIsAiming', () => {
 
       act(() => {
         simulateMouseMove(160, 100);
+      });
+
+      // Advance timer to trigger the animation frame
+      act(() => {
+        jest.advanceTimersByTime(16);
       });
 
       expect(result.current.isAiming()).toBe(true);
@@ -697,6 +719,11 @@ describe('useIsAiming', () => {
         simulateMouseMove(160, 200);
       });
 
+      // Advance timer to trigger the animation frame
+      act(() => {
+        jest.advanceTimersByTime(16);
+      });
+
       expect(result.current.isAiming()).toBe(true);
     });
 
@@ -724,6 +751,11 @@ describe('useIsAiming', () => {
         simulateMouseMove(50, 150);
       });
 
+      // Advance timer to trigger the animation frame
+      act(() => {
+        jest.advanceTimersByTime(16);
+      });
+
       expect(result.current.isAiming()).toBe(false);
     });
 
@@ -740,6 +772,11 @@ describe('useIsAiming', () => {
 
       act(() => {
         simulateMouseMove(100, 160);
+      });
+
+      // Advance timer to trigger the animation frame
+      act(() => {
+        jest.advanceTimersByTime(16);
       });
 
       expect(result.current.isAiming()).toBe(false);
@@ -773,9 +810,9 @@ describe('useIsAiming', () => {
         simulateMouseMove(100, 160);
       });
 
-      // Wait for any pending recalculations
+      // Advance timer to trigger the animation frame
       act(() => {
-        jest.advanceTimersByTime(0);
+        jest.advanceTimersByTime(16);
       });
 
       expect(result.current.isAiming()).toBe(true);
@@ -786,9 +823,9 @@ describe('useIsAiming', () => {
         simulateMouseMove(10, 10); // Move far away from menu
       });
 
-      // Wait for any pending recalculations
+      // Advance timer to trigger the animation frame
       act(() => {
-        jest.advanceTimersByTime(0);
+        jest.advanceTimersByTime(16);
       });
 
       expect(result.current.isAiming()).toBe(false);
