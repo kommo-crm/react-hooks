@@ -429,12 +429,17 @@ export const useIsAiming = <T extends HTMLElement = HTMLElement>(
 
     const aiming = isMovingTowardTriangle(prev, cursor, edge[0], edge[1]);
 
-    // Tolerance only affects transitions when isAiming is already true
-    // If transitioning from false to true, always allow it
-    if (isAimingRef.current && !aiming) {
-      // Currently aiming, but new calculation says not aiming
-      // Check if accumulated movement is significant enough
-      if (accumulatedMovementRef.current < tolerance) {
+    // Apply tolerance to prevent flickering during slow movements
+    // Use asymmetric tolerance: very small threshold for false->true (maintains sensitivity)
+    // and full tolerance for true->false (prevents flickering)
+    if (isAimingRef.current !== aiming) {
+      // State would change, check if movement is significant enough
+      const threshold =
+        !isAimingRef.current && aiming
+          ? Math.min(5, tolerance / 4) // Very small threshold (max 5px) for false->true
+          : tolerance; // Full threshold for true->false
+
+      if (accumulatedMovementRef.current < threshold) {
         // Movement is too small, keep current aiming state
         // Don't update lastRecalcCursorRef to maintain consistency
         return;
