@@ -354,16 +354,17 @@ export const useIsAiming = <T extends HTMLElement = HTMLElement>(
   const lastRecalcCursorRef = useRef<Point | null>(null);
   const accumulatedMovementRef = useRef(0);
   const idleTimeoutRef = useRef<number | null>(null);
+  const rafIdRef = useRef<number | null>(null);
+  const pendingRecalcRef = useRef(false);
 
   /**
    * Updates aiming state and notifies consumer.
    * @param {boolean} value - The new aiming state.
-   * @param {boolean} forceChange - If true, always call onChange even if value didn't change.
    * @returns {void}
    */
-  const setIsAiming = (value: boolean, forceChange = false) => {
+  const setIsAiming = (value: boolean) => {
     // Only call onChange if the value actually changed, or if forceChange is true
-    if (isAimingRef.current !== value || forceChange) {
+    if (isAimingRef.current !== value) {
       isAimingRef.current = value;
       onChange?.(value);
     } else {
@@ -378,14 +379,32 @@ export const useIsAiming = <T extends HTMLElement = HTMLElement>(
    * toward the referenced element.
    */
   const recalc = useCallback(() => {
+    pendingRecalcRef.current = false;
+    rafIdRef.current = null;
+
     const cursor = lastCursorRef.current;
-    const prev = prevCursorRef.current;
+    // Use lastRecalcCursorRef as prev to ensure consistency between recalculations
+    // This prevents flickering when cursor moves slowly
+    const prev = lastRecalcCursorRef.current || prevCursorRef.current;
     const el = ref.current;
 
-    if (!cursor || !prev || !el) {
+    if (!cursor || !el) {
       setIsAiming(false);
       lastRecalcCursorRef.current = null;
       accumulatedMovementRef.current = 0;
+      return;
+    }
+
+    // Need prev for triangle calculation
+    if (!prev) {
+      // First movement, just store cursor position
+      lastRecalcCursorRef.current = cursor;
+      setIsAiming(false);
+      return;
+    }
+
+    // If cursor hasn't moved since last recalculation, don't recalculate
+    if (cursor.x === prev.x && cursor.y === prev.y) {
       return;
     }
 
@@ -410,13 +429,19 @@ export const useIsAiming = <T extends HTMLElement = HTMLElement>(
 
     const aiming = isMovingTowardTriangle(prev, cursor, edge[0], edge[1]);
 
-    // Tolerance only affects transitions when isAiming is already true
-    // If transitioning from false to true, always allow it
-    if (isAimingRef.current && !aiming) {
-      // Currently aiming, but new calculation says not aiming
-      // Check if accumulated movement is significant enough
-      if (accumulatedMovementRef.current < tolerance) {
+    // Apply tolerance to prevent flickering during slow movements
+    // Use asymmetric tolerance: very small threshold for false->true (maintains sensitivity)
+    // and full tolerance for true->false (prevents flickering)
+    if (isAimingRef.current !== aiming) {
+      // State would change, check if movement is significant enough
+      const threshold =
+        !isAimingRef.current && aiming
+          ? Math.min(5, tolerance / 4) // Very small threshold (max 5px) for false->true
+          : tolerance; // Full threshold for true->false
+
+      if (accumulatedMovementRef.current < threshold) {
         // Movement is too small, keep current aiming state
+        // Don't update lastRecalcCursorRef to maintain consistency
         return;
       }
     }
@@ -430,20 +455,43 @@ export const useIsAiming = <T extends HTMLElement = HTMLElement>(
 
   useEffect(() => {
     if (!isEnabled) {
-      setIsAiming(false, true); // Force onChange call when disabling
+      setIsAiming(false);
       lastCursorRef.current = null;
       prevCursorRef.current = null;
       lastRecalcCursorRef.current = null;
       accumulatedMovementRef.current = 0;
+
+      // Clear any pending timeouts and animation frames
+      if (idleTimeoutRef.current) {
+        clearTimeout(idleTimeoutRef.current);
+        idleTimeoutRef.current = null;
+      }
+
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+
+      pendingRecalcRef.current = false;
+
       return;
     }
 
+    // Track cursor position and recalculate on movement
     const onMouseMove = (e: MouseEvent) => {
       const newCursor = { x: e.pageX, y: e.pageY };
       const oldCursor = lastCursorRef.current;
 
-      prevCursorRef.current = lastCursorRef.current;
-      lastCursorRef.current = newCursor;
+      // Check if cursor actually moved
+      const hasMoved =
+        !oldCursor ||
+        newCursor.x !== oldCursor.x ||
+        newCursor.y !== oldCursor.y;
+
+      if (!hasMoved) {
+        // Cursor hasn't moved, don't do anything
+        return;
+      }
 
       // Accumulate movement distance
       if (oldCursor) {
@@ -453,14 +501,23 @@ export const useIsAiming = <T extends HTMLElement = HTMLElement>(
         accumulatedMovementRef.current += movementDistance;
       }
 
-      // Clear idle timeout
+      prevCursorRef.current = lastCursorRef.current;
+      lastCursorRef.current = newCursor;
+
+      // Schedule recalculation using requestAnimationFrame for smooth updates
+      // This ensures recalculation happens on the next frame, working at any mouse speed
+      if (!pendingRecalcRef.current) {
+        pendingRecalcRef.current = true;
+        rafIdRef.current = requestAnimationFrame(() => {
+          recalc();
+        });
+      }
+
+      // Reset idle timeout on movement
       if (idleTimeoutRef.current) {
         clearTimeout(idleTimeoutRef.current);
         idleTimeoutRef.current = null;
       }
-
-      // Immediate recalculation
-      recalc();
 
       // Set idle timeout: if cursor doesn't move for specified time, set aiming to false
       idleTimeoutRef.current = window.setTimeout(() => {
@@ -477,6 +534,10 @@ export const useIsAiming = <T extends HTMLElement = HTMLElement>(
 
       if (idleTimeoutRef.current) {
         clearTimeout(idleTimeoutRef.current);
+      }
+
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
       }
     };
   }, [isEnabled, recalc, idleTimeout]);
